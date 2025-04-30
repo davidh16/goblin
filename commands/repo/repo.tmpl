@@ -1,0 +1,19 @@
+package {{.RepoPackage}}
+
+import "gorm.io/gorm"
+
+type {{.RepoEntity}}RepoInterface interface {
+    WithTx(tx *gorm.DB) *{{.RepoEntity}}Repo
+}
+
+type {{.RepoEntity}}Repo struct {
+	db *gorm.DB
+}
+
+func New{{.RepoEntity}}Repo(db *gorm.DB) *{{.RepoEntity}}Repo {
+	return &{{.RepoEntity}}Repo{db: db}
+}
+
+func (r *{{.RepoEntity}}Repo)WithTx(tx *gorm.DB) *{{.RepoEntity}}Repo {
+    return &{{.RepoEntity}}Repo{db: tx}
+}

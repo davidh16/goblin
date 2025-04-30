@@ -1,0 +1,11 @@
+package {{.RepoPackage}}
+
+import "gorm.io/gorm"
+
+type CentralRepo struct {
+	UnitOfWork UnitOfWorkInterface
+}
+
+func NewCentralRepo(db *gorm.DB) *CentralRepo {
+	return &CentralRepo{UnitOfWork: NewUnitOfWork(db)}
+}

@@ -1,0 +1,9 @@
+package {{.ServicePackage}}
+
+type {{.ServiceEntity}}ServiceInterface interface{}
+
+type {{.ServiceEntity}}Service struct{}
+
+func New{{.ServiceEntity}}Service() *{{.ServiceEntity}}Service {
+	return &{{.ServiceEntity}}Service{}
+}

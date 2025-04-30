@@ -1,0 +1,43 @@
+package {{.RepoPackage}}
+
+import (
+	"gorm.io/gorm"
+)
+
+type UnitOfWorkInterface interface{}
+
+// UnitOfWork manages database transactions to ensure atomic operations.
+type UnitOfWork struct {
+	db *gorm.DB
+}
+
+func NewUnitOfWork(db *gorm.DB) *UnitOfWork {
+	return &UnitOfWork{db}
+}
+
+// Execute runs the provided function within a database transaction.
+// It automatically begins a transaction, passes the transaction object to the function,
+// and commits or rolls back the transaction based on whether an error occurs.
+//
+// If the function returns an error, the transaction is rolled back and the error is returned.
+// If the function succeeds, the transaction is committed and any commit error is returned.
+//
+// Example usage:
+//     err := unitOfWork.Execute(func(tx *gorm.DB) error {
+//         // perform database operations using tx
+//         return nil
+//     })
+func (u *UnitOfWork) Execute(fn func(tx *gorm.DB) error) error {
+	tx := u.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	err := fn(tx)
+	if err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
+}

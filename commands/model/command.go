@@ -1,0 +1,183 @@
+package model
+
+import (
+	"errors"
+	"fmt"
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/jinzhu/inflection"
+	"github.com/spf13/cobra"
+	"goblin/cli_config"
+	"goblin/commands/model/flags/user"
+	"goblin/utils"
+	"goblin/utils/model_utils"
+	"os"
+	"path"
+	"strings"
+	"text/template"
+)
+
+var (
+	UserModelFlag bool
+)
+
+var ModelCmd = &cobra.Command{
+	Use:   "model",
+	Short: "Generate model",
+	Run: func(cmd *cobra.Command, args []string) {
+		if UserModelFlag {
+			user.GenerateUserModel()
+		} else {
+			ModelCmdHandler()
+		}
+	},
+}
+
+func ModelCmdHandler() {
+
+	modelData := model_utils.ModelData{}
+
+	for {
+		if err := survey.AskOne(&survey.Input{
+			Message: "Please type the model file name (snake_case) :",
+			Default: "my_model_file",
+		}, &modelData.NameSnakeCase); err != nil {
+			utils.HandleError(err)
+		}
+
+		if !utils.IsSnakeCase(modelData.NameSnakeCase) {
+			fmt.Printf("🛑 %s is not in snake case\n", modelData.NameSnakeCase)
+			continue
+		}
+
+		var confirmContinue bool
+		confirmPrompt := &survey.Confirm{
+			Message: fmt.Sprintf("You are about to create a model file named %s.go, do you want to continue ?", modelData.NameSnakeCase),
+		}
+		if err := survey.AskOne(confirmPrompt, &confirmContinue); err != nil {
+			utils.HandleError(err)
+		}
+
+		if !confirmContinue {
+			continue
+		}
+
+		modelData.ModelEntity = utils.SnakeToPascal(modelData.NameSnakeCase)
+		modelData.ModelFileName = modelData.NameSnakeCase + ".go"
+		modelData.ModelFilePath = path.Join(cli_config.CliConfig.ModelsFolderPath, modelData.ModelFileName)
+
+		if utils.FileExists(modelData.ModelFilePath) {
+			var overwriteConfirmed bool
+			confirmPrompt = &survey.Confirm{
+				Message: fmt.Sprintf("%s model already exists. Do you want to overwrite it ?", modelData.ModelFileName),
+				Default: false,
+			}
+			if err := survey.AskOne(confirmPrompt, &overwriteConfirmed); err != nil {
+				utils.HandleError(err)
+			}
+
+			if overwriteConfirmed {
+				confirmPrompt = &survey.Confirm{
+					Message: fmt.Sprintf("Are you sure you want to overwrite %s model ?", modelData.ModelFileName),
+					Default: false,
+				}
+				if err := survey.AskOne(confirmPrompt, &overwriteConfirmed); err != nil {
+					utils.HandleError(err)
+				}
+			}
+
+			if !overwriteConfirmed {
+				continue
+			}
+		}
+		break
+	}
+
+	funcMap := template.FuncMap{
+		"Pluralize": inflection.Plural,
+	}
+
+	// Write the model to file
+	tmpl, err := template.New(ModelTemplateName).Funcs(funcMap).ParseFiles(ModelTemplatePath)
+	if err != nil {
+		utils.HandleError(err, "Error parsing model template")
+	}
+
+	f, err := os.Create(modelData.ModelFilePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(cli_config.CliConfig.ModelsFolderPath, 0755) // 0755 = rwxr-xr-x
+			if err != nil {
+				utils.HandleError(err, "Error creating model folder")
+			}
+			f, err = os.Create(modelData.ModelFilePath)
+			if err != nil {
+				utils.HandleError(err, "Error creating model file")
+			}
+		}
+	}
+	defer f.Close()
+
+	templateData := struct {
+		Package         string
+		ModelPascalCase string
+		ModelCamelCase  string
+	}{
+		Package:         strings.Split(cli_config.CliConfig.ModelsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ModelsFolderPath, "/"))-1],
+		ModelPascalCase: modelData.ModelEntity,
+		ModelCamelCase:  utils.PascalToCamel(modelData.ModelEntity),
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		utils.HandleError(err, "Error executing model template")
+	}
+
+	fmt.Println(fmt.Sprintf("✅ %s model generated.", modelData.ModelEntity))
+}
+
+func CreateModel(modelData *model_utils.ModelData) error {
+	funcMap := template.FuncMap{
+		"Pluralize": inflection.Plural,
+	}
+
+	// Write the model to file
+	tmpl, err := template.New(ModelTemplateName).Funcs(funcMap).ParseFiles(ModelTemplatePath)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(modelData.ModelFilePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(cli_config.CliConfig.ModelsFolderPath, 0755) // 0755 = rwxr-xr-x
+			if err != nil {
+				if !os.IsExist(err) {
+					return err
+				}
+			}
+			f, err = os.Create(modelData.ModelFilePath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	defer f.Close()
+
+	templateData := struct {
+		Package         string
+		ModelPascalCase string
+		ModelCamelCase  string
+	}{
+		Package:         strings.Split(cli_config.CliConfig.ModelsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ModelsFolderPath, "/"))-1],
+		ModelPascalCase: modelData.ModelEntity,
+		ModelCamelCase:  utils.PascalToCamel(modelData.ModelEntity),
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(fmt.Sprintf("✅ %s model generated.", modelData.ModelEntity))
+	return nil
+}
