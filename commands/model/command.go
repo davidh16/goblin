@@ -35,11 +35,11 @@ var ModelCmd = &cobra.Command{
 func ModelCmdHandler() {
 
 	modelData := model_utils.ModelData{}
-
+	defaultModelName := "my_model_file"
 	for {
 		if err := survey.AskOne(&survey.Input{
 			Message: "Please type the model file name (snake_case) :",
-			Default: "my_model_file",
+			Default: defaultModelName,
 		}, &modelData.NameSnakeCase); err != nil {
 			utils.HandleError(err)
 		}
@@ -48,6 +48,8 @@ func ModelCmdHandler() {
 			fmt.Printf("🛑 %s is not in snake case\n", modelData.NameSnakeCase)
 			continue
 		}
+
+		defaultModelName = modelData.NameSnakeCase
 
 		var confirmContinue bool
 		confirmPrompt := &survey.Confirm{

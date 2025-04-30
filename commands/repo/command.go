@@ -33,11 +33,11 @@ var RepoCmd = &cobra.Command{
 func repoCmdHandler() {
 
 	repoData := repo_utils.NewRepoData()
-
+	defaultRepoName := "my_repo_file"
 	for {
 		if err := survey.AskOne(&survey.Input{
 			Message: "Please type the repository file name (snake_case) :",
-			Default: "my_repo_file",
+			Default: defaultRepoName,
 		}, &repoData.RepoNameSnakeCase); err != nil {
 			utils.HandleError(err)
 		}
@@ -46,6 +46,8 @@ func repoCmdHandler() {
 			fmt.Printf("🛑 %s is not in snake case\n", repoData.RepoNameSnakeCase)
 			continue
 		}
+
+		defaultRepoName = repoData.RepoNameSnakeCase
 
 		var confirmContinue bool
 		confirmPrompt := &survey.Confirm{

@@ -31,11 +31,11 @@ var ServiceCmd = &cobra.Command{
 func serviceCmdHandler() {
 
 	serviceData := service_utils.NewServiceData()
-
+	defaultServiceName := "my_service_file"
 	for {
 		if err := survey.AskOne(&survey.Input{
 			Message: "Please type the services file name (snake_case) :",
-			Default: "my_service_file",
+			Default: defaultServiceName,
 		}, &serviceData.ServiceNameSnakeCase); err != nil {
 			utils.HandleError(err)
 		}
@@ -44,6 +44,8 @@ func serviceCmdHandler() {
 			fmt.Printf("🛑 %s is not in snake case\n", serviceData.ServiceNameSnakeCase)
 			continue
 		}
+
+		defaultServiceName = serviceData.ServiceNameSnakeCase
 
 		var confirm bool
 		confirmPrompt := &survey.Confirm{
