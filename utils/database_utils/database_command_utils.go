@@ -117,7 +117,7 @@ func InitializeDatabaseInstance(database DatabaseData) error {
 		return err
 	}
 
-	if database.DatabaseType != Redis {
+	if database.DatabaseType != Redis && !utils.FileExists(path.Join(cli_config.CliConfig.DatabaseInstancesFolderPath, "pagination.go")) {
 		err = generatePaginationFile()
 		if err != nil {
 			return err

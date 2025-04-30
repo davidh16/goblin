@@ -11,7 +11,6 @@ import (
 )
 
 func ConnectToPostgres() (*gorm.DB, error) {
-
     connectionUri := fmt.Sprintf("user=%s password=%s database=%s host=%s",
         os.Getenv("POSTGRES_USER"),
         os.Getenv("POSTGRES_PASSWORD"),

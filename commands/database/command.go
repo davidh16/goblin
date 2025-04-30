@@ -5,10 +5,12 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+	"goblin/cli_config"
 	"goblin/utils"
 	"goblin/utils/database_utils"
 	"os"
 	"path"
+	"strings"
 )
 
 var DatabaseCmd = &cobra.Command{
@@ -20,15 +22,64 @@ var DatabaseCmd = &cobra.Command{
 }
 
 func databaseCmdHandler() {
-
 	var selectedDatabaseNames []string
-	selectDatabasesPrompt := &survey.MultiSelect{
-		Message: "Which databases do you want to use?",
-		Options: utils.Keys(database_utils.DatabaseNameOptionsMap),
-	}
-	err := survey.AskOne(selectDatabasesPrompt, &selectedDatabaseNames)
-	if err != nil {
-		utils.HandleError(err)
+	for {
+		selectDatabasesPrompt := &survey.MultiSelect{
+			Message: "Which databases do you want to use?",
+			Options: utils.Keys(database_utils.DatabaseNameOptionsMap),
+		}
+		err := survey.AskOne(selectDatabasesPrompt, &selectedDatabaseNames)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		var existingDatabaseInstances []string
+		for _, databaseName := range selectedDatabaseNames {
+			if utils.FileExists(path.Join(cli_config.CliConfig.DatabaseInstancesFolderPath, database_utils.DatabaseOptionInstanceDefaultFileNamesMap[database_utils.DatabaseNameOptionsMap[databaseName]])) {
+				existingDatabaseInstances = append(existingDatabaseInstances, databaseName)
+			}
+		}
+
+		if len(existingDatabaseInstances) != 0 {
+
+			var propmtText string
+			if len(existingDatabaseInstances) == 1 {
+				propmtText = fmt.Sprintf("%s instance already exists, do you want to overwrite it?", existingDatabaseInstances[0])
+			} else {
+				propmtText = fmt.Sprintf("%s instances already exist, do you want to overwrite them?", strings.Join(existingDatabaseInstances, ", "))
+			}
+
+			var confirmOverwrite bool
+			confirmOverwritePrompt := &survey.Confirm{
+				Message: propmtText,
+				Default: false,
+			}
+			err = survey.AskOne(confirmOverwritePrompt, &confirmOverwrite)
+			if err != nil {
+				utils.HandleError(err)
+			}
+
+			if !confirmOverwrite {
+				selectedDatabaseNames = []string{}
+				continue
+			}
+
+			confirmOverwritePrompt = &survey.Confirm{
+				Message: "Are you sure you want to overwrite?",
+				Default: false,
+			}
+			err = survey.AskOne(confirmOverwritePrompt, &confirmOverwrite)
+			if err != nil {
+				utils.HandleError(err)
+			}
+
+			if !confirmOverwrite {
+				selectedDatabaseNames = []string{}
+				continue
+			}
+		}
+
+		break
 	}
 
 	selectedDatabaseOptions := lo.Map(selectedDatabaseNames, func(item string, index int) database_utils.DatabaseOption {
@@ -38,7 +89,7 @@ func databaseCmdHandler() {
 	var databases []database_utils.DatabaseData
 	for _, databaseOption := range selectedDatabaseOptions {
 		var databasePort string
-		if err = survey.AskOne(&survey.Input{
+		if err := survey.AskOne(&survey.Input{
 			Message: fmt.Sprintf("Please type in %s port you want to use :", database_utils.DatabaseOptionNamesMap[databaseOption]),
 			Default: database_utils.DatabaseOptionDefaultPortsMap[databaseOption],
 		}, &databasePort); err != nil {
