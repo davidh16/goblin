@@ -9,12 +9,13 @@ import (
 	"goblin/utils"
 )
 
-func main() {
-
+func init() {
 	err := cli_config.LoadConfig()
 	if err != nil {
 		utils.HandleError(err)
 	}
+}
 
+func main() {
 	root_cmd.Execute()
 }

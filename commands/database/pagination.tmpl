@@ -1,34 +1,10 @@
 package {{.DatabasePackage}}
 
 import (
-	"gorm.io/driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
-	"log"
 	"math"
-	"os"
-	"fmt"
 )
-
-func ConnectToMariaDB() (*gorm.DB, error) {
-
-    connectionUri := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-    		os.Getenv("MARIADB_USER"),
-    		os.Getenv("MARIADB_PASSWORD"),
-    		os.Getenv("MARIADB_HOST"),
-    		os.Getenv("MARIADB_PORT"),
-    		os.Getenv("MARIADB_NAME"))
-
-
-	mariaDbInstance, err := gorm.Open(mysql.Open(connectionUri), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
-	})
-	if err != nil {
-		return nil, err
-	}
-	log.Println("Connected to MariaDB!")
-	return mariaDbInstance, nil
-}
 
 type Pagination struct {
 	Limit      int    `json:"limit,omitempty" query:"page_size"`

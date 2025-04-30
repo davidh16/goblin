@@ -242,3 +242,47 @@ func PascalToCamel(input string) string {
 	}
 	return strings.ToLower(input[:1]) + input[1:]
 }
+
+// ReadEnvFile reads the .env file into a map[string]string
+func ReadEnvFile(envFile *os.File) (map[string]string, error) {
+	env := make(map[string]string)
+
+	scanner := bufio.NewScanner(envFile)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if len(line) == 0 || strings.HasPrefix(line, "#") {
+			continue // skip empty lines and comments
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			env[parts[0]] = parts[1]
+		}
+	}
+	return env, scanner.Err()
+}
+
+// WriteEnvFile writes the final map to the .env file
+func writeEnvFile(file *os.File, envMap map[string]string) error {
+	for key, value := range envMap {
+		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WriteToEnvFile merges and writes new env vars
+func WriteToEnvFile(file *os.File, newEnv map[string]string) error {
+	existingEnv, err := ReadEnvFile(file)
+	if err != nil {
+		return err
+	}
+
+	// Merge with new keys (overwrite existing)
+	for k, v := range newEnv {
+		existingEnv[k] = v
+	}
+
+	return writeEnvFile(file, existingEnv)
+}

@@ -12,11 +12,12 @@ import (
 const configFilePath = ".goblin/cli_config.yaml"
 
 type Config struct {
-	ModelsFolderPath       string `yaml:"models_folder_path"`       // path for folder where model go files are located
-	ControllersFolderPath  string `yaml:"controllers_folder_path"`  // path for folder where controller go files are located
-	ServicesFolderPath     string `yaml:"services_folder_path"`     // path for folder where service go files are located
-	RepositoriesFolderPath string `yaml:"repositories_folder_path"` // path for folder where repo go files are located
-	ProjectName            string `yaml:"project_name"`
+	ModelsFolderPath            string `yaml:"models_folder_path"`       // path for folder where model go files are located
+	ControllersFolderPath       string `yaml:"controllers_folder_path"`  // path for folder where controller go files are located
+	ServicesFolderPath          string `yaml:"services_folder_path"`     // path for folder where service go files are located
+	RepositoriesFolderPath      string `yaml:"repositories_folder_path"` // path for folder where repo go files are located
+	DatabaseInstancesFolderPath string `yaml:"database_instances_folder_path"`
+	ProjectName                 string `yaml:"project_name"`
 }
 
 var CliConfig *Config
@@ -48,8 +49,6 @@ func CreateConfigFile() error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("xxx")
 
 	configYamlFile, err := os.Create(filepath.Join(home, configFilePath))
 	if err != nil {

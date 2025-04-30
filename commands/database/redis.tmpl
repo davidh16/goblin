@@ -1,0 +1,25 @@
+package {{.DatabasePackage}}
+
+import (
+	"context"
+	"fmt"
+	"github.com/redis/go-redis/v9"
+	"log"
+	"os"
+)
+
+func ConnectToRedis() (*redis.Client, error) {
+	redisInstance := redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       0,
+	})
+
+	_, err := redisInstance.Ping(context.Background()).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("Successfully connected to Redis !")
+	return redisInstance, nil
+}

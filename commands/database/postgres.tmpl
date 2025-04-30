@@ -1,0 +1,36 @@
+package {{.DatabasePackage}}
+
+import (
+	"database/sql"
+	"fmt"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"log"
+	"os"
+)
+
+func ConnectToPostgres() (*gorm.DB, error) {
+
+    connectionUri := fmt.Sprintf("user=%s password=%s database=%s host=%s",
+        os.Getenv("POSTGRES_USER"),
+        os.Getenv("POSTGRES_PASSWORD"),
+        os.Getenv("POSTGRES_DATABASE_NAME"),
+        os.Getenv("POSTGRES_DATABASE_HOST"))
+
+    // dbPool is the pool of database connections.
+    dbPool, err := sql.Open("pgx", connectionUri)
+    if err != nil {
+        return nil, err
+    }
+
+    postgresInstance, err := gorm.Open(postgres.New(postgres.Config{
+        Conn: dbPool,
+    }), &gorm.Config{})
+    if err != nil {
+        return nil, err
+    }
+
+    log.Println(" Successfully connected to database")
+    return postgresInstance, nil
+}

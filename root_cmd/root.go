@@ -3,6 +3,7 @@ package root_cmd
 import (
 	"goblin/commands/config"
 	"goblin/commands/controller"
+	"goblin/commands/database"
 	"goblin/commands/model"
 	"goblin/commands/repo"
 	"goblin/commands/service"
@@ -46,6 +47,8 @@ func init() {
 
 	rootCmd.AddCommand(config.ConfigCmd)
 	config.ConfigCmd.Flags().BoolVarP(&config.EditCliConfigFlag, "edit", "e", false, "Edit goblin config file")
+
+	rootCmd.AddCommand(database.DatabaseCmd)
 
 	rootCmd.AddCommand(model.ModelCmd)
 	model.ModelCmd.Flags().BoolVarP(&model.UserModelFlag, "user", "u", false, "Generate user model")
