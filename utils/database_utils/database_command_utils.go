@@ -158,3 +158,11 @@ func generatePaginationFile() error {
 	fmt.Println("✅ pagination.go file generated.")
 	return nil
 }
+
+func GetSortedDatabaseOptions() []string {
+	var sortedDatabaseOptions []string
+	for i := range len(DatabaseOptionNamesMap) {
+		sortedDatabaseOptions = append(sortedDatabaseOptions, DatabaseOptionNamesMap[DatabaseOption(i)])
+	}
+	return sortedDatabaseOptions
+}

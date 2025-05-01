@@ -24,10 +24,11 @@ var DatabaseCmd = &cobra.Command{
 func databaseCmdHandler() {
 	var selectedDatabaseNames []string
 	var preselectedOptions []string
+
 	for {
 		selectDatabasesPrompt := &survey.MultiSelect{
 			Message: "Which databases do you want to use?",
-			Options: utils.Keys(database_utils.DatabaseNameOptionsMap),
+			Options: database_utils.GetSortedDatabaseOptions(),
 			Default: preselectedOptions,
 		}
 		err := survey.AskOne(selectDatabasesPrompt, &selectedDatabaseNames)
