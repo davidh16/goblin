@@ -162,6 +162,10 @@ func generatePaginationFile() error {
 func GetSortedDatabaseOptions() []string {
 	var sortedDatabaseOptions []string
 	for i := range len(DatabaseOptionNamesMap) {
+		if DatabaseOption(i) == Unspecified {
+			continue
+		}
+
 		sortedDatabaseOptions = append(sortedDatabaseOptions, DatabaseOptionNamesMap[DatabaseOption(i)])
 	}
 	return sortedDatabaseOptions
