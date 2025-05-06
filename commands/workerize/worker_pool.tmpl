@@ -1,0 +1,14 @@
+package {{.WorkersPackage}}
+
+import (
+	"context"
+	"goblin/{{.JobsPackage}}"
+)
+
+type WorkerPoolInterface interface {
+	Start(ctx context.Context, jobChan chan *jobs.Job, resultChan chan *jobs.JobResult)
+}
+
+type WorkerInterface interface {
+	HandleJob(ctx context.Context, job *jobs.Job) *jobs.JobResult
+}

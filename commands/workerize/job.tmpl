@@ -1,0 +1,102 @@
+package {{.JobsPackage}}
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
+	"reflect"
+	"time"
+)
+
+type JobStatus int
+
+type JobType int
+
+type Job struct {
+	Uuid        string          `gorm:"primaryKey" json:"uuid"`
+	JobType     JobType         `json:"job_type"` // e.g. "upload", "notify"
+	Status      JobStatus       `json:"status"`   // "failed", "resolved"
+	Error       *string         `json:"error"`
+	RetryCount  int             `json:"retry_count"`
+	JobMetadata JobMetadata     `gorm:"-" json:"job_metadata"` // this is just a carrier for metadata interface, not saved to db
+	Metadata    json.RawMessage `json:"metadata"`              // placeholder for extracted metadata from redis or for metadata that has to be saved to redis
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (Job) TableName() string {
+	return "jobs"
+}
+
+type JobMetadata interface{}
+
+type JobResult struct {
+	Job *Job
+	Err error
+}
+
+const (
+	JobStatusUnspecified JobStatus = iota
+	JobStatusFailed
+	JobStatusQueued
+	JobStatusResolved
+)
+const (
+	JobTypeUnspecified JobType = iota
+	JobTypeS3EmailAttachmentUpload
+)
+
+// jobTypesMap defines the set of supported job types for validation.
+// Used in ProcessJob to ensure only known job types are processed.
+var jobTypesMap = map[JobType]struct{}{
+	JobTypeS3EmailAttachmentUpload: {},
+}
+
+// jobTypeMetadataMap maps each JobType to the expected Go struct type
+// for the job's metadata. Used to validate and parse metadata dynamically.
+var jobTypeMetadataMap = map[JobType]reflect.Type{
+	JobTypeS3EmailAttachmentUpload: reflect.TypeOf(S3EmailAttachmentJobMetadata{}),
+}
+
+// ParseMetadata unmarshals raw JSON into a specific typed metadata struct.
+// T must be a struct type matching the job type's expected metadata format.
+func ParseMetadata[T any](raw json.RawMessage) (T, error) {
+	var out T
+	err := json.Unmarshal(raw, &out)
+	return out, err
+}
+
+// NewJob creates a new Job instance with the provided job type and metadata.
+// It validates that the metadata type matches the expected type for the job.
+// Returns an error if the job type is unregistered or the metadata doesn't match.
+func NewJob(jobType JobType, metadata JobMetadata) (*Job, error) {
+
+	expectedMetadataType, ok := jobTypeMetadataMap[jobType]
+	if !ok {
+		return nil, errors.WithStack(fmt.Errorf("unregistered job type: %v", jobType))
+	}
+
+	actualType := reflect.TypeOf(metadata)
+
+	if actualType != expectedMetadataType {
+		return nil, errors.WithStack(fmt.Errorf("metadata type mismatch for job type %v: expected %v, got %v", jobType, expectedMetadataType, actualType))
+	}
+
+	rawMetadata, err := json.Marshal(metadata)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Job{
+		Uuid:        uuid.New().String(),
+		JobType:     jobType,
+		Status:      JobStatusQueued,
+		Error:       nil,
+		RetryCount:  0,
+		Metadata:    rawMetadata,
+		JobMetadata: metadata,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}, nil
+}

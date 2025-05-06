@@ -1,0 +1,88 @@
+package {{.JobsPackage}}
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"github.com/pkg/errors"
+	"github.com/redis/rueidis"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+const RedisJobQueue = "jobs_queue"
+
+type JobsManaagerInterface interface {
+	FetchAndProcessJob(ctx context.Context) (*Job, error)
+	EnqueueJob(ctx context.Context, job *Job) error
+	RequeueJob(ctx context.Context, job *Job) error
+	SaveFailedJob(failedJob *Job) error
+}
+
+type jobManager struct {
+	redisClient rueidis.Client
+	gormClient  *gorm.DB
+}
+
+func NewJobsManager(client rueidis.Client, db *gorm.DB) JobsManaagerInterface {
+	return &jobManager{
+		redisClient: client,
+		gormClient:  db,
+	}
+}
+
+func (jm *jobManager) FetchAndProcessJob(ctx context.Context) (*Job, error) {
+	// get the job json from redis
+	redisResult := jm.redisClient.Do(ctx, jm.redisClient.B().Blpop().Key(RedisJobQueue).Timeout(0).Build())
+	if redisResult.Error() != nil {
+		return nil, redisResult.Error()
+	}
+
+	redisResultArray, err := redisResult.ToArray()
+	if err != nil {
+		return nil, err
+	}
+
+	rawJob, err := redisResultArray[1].ToString()
+	if err != nil {
+		return nil, err
+	}
+
+	var processedJob Job
+	if err = json.Unmarshal([]byte(rawJob), &processedJob); err != nil {
+		return nil, err
+	}
+
+	if _, exist := jobTypesMap[processedJob.JobType]; !exist {
+		return nil, errors.WithStack(errors.New("job type not supported"))
+	}
+
+	return &processedJob, nil
+}
+
+func (jm *jobManager) EnqueueJob(ctx context.Context, job *Job) error {
+	payload, err := json.Marshal(job)
+	if err != nil {
+		return errors.WithStack(fmt.Errorf("failed to marshal job: %w", err))
+	}
+	return jm.redisClient.Do(ctx, jm.redisClient.B().Rpush().Key(RedisJobQueue).Element(string(payload)).Build()).Error()
+}
+
+func (jm *jobManager) RequeueJob(ctx context.Context, job *Job) error {
+	payload, _ := json.Marshal(job)
+	return jm.redisClient.Do(ctx, jm.redisClient.B().Rpush().Key(RedisJobQueue).Element(string(payload)).Build()).Error()
+}
+
+// SaveFailedJob updates or inserts a failed job into the database for tracking.
+// Re-marshals the in-memory JobMetadata back into Metadata for persistence.
+func (jm *jobManager) SaveFailedJob(failedJob *Job) error {
+
+	rawMetadata, err := json.Marshal(failedJob.JobMetadata)
+	if err != nil {
+		return err
+	}
+
+	failedJob.Metadata = rawMetadata
+
+	return jm.gormClient.Model(failedJob).Clauses(clause.OnConflict{UpdateAll: true}).Create(&failedJob).Error
+}

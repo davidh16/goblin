@@ -17,6 +17,9 @@ type Config struct {
 	ServicesFolderPath          string `yaml:"services_folder_path"`     // path for folder where service go files are located
 	RepositoriesFolderPath      string `yaml:"repositories_folder_path"` // path for folder where repo go files are located
 	DatabaseInstancesFolderPath string `yaml:"database_instances_folder_path"`
+	WorkersFolderPath           string `yaml:"workers_folder_path"`
+	JobsFolderPath              string `yaml:"jobs_folder_path"`
+	LoggerFolderPath            string `yaml:"logger_folder_path"`
 	ProjectName                 string `yaml:"project_name"`
 }
 

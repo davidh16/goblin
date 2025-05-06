@@ -1,0 +1,84 @@
+package workers
+
+import (
+	"context"
+	"fmt"
+	"goblin/{{.JobsPackage}}"
+	"goblin/{{.LoggerPackage}}"
+	"goblin/test/services"
+	"math/rand"
+	"time"
+)
+
+const baseRetryDelay = 2 * time.Second
+
+
+var jobTypeMaxNumberOfRetriesMap = map[jobs.JobType]int{}
+
+type OrchestratorWorker struct {
+	jobsManager      jobs.JobsManaagerInterface
+}
+
+func NewOrchestratorWorker(jobsManager jobs.JobsManaagerInterface, service *services.CentralService) *OrchestratorWorker {
+	return &OrchestratorWorker{
+		jobsManager:      jobsManager,
+	}
+}
+
+func (o *OrchestratorWorker) Start(ctx context.Context) {
+	results := make(chan *jobs.JobResult)
+
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-results:
+			o.handleResult(ctx, res)
+		default:
+
+			processedJob, err := o.jobsManager.FetchAndProcessJob(ctx)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			switch processedJob.JobType {
+			default:
+				logger.Logger.LogError().Msg(fmt.Sprintf("Unknown job type: %d", processedJob.JobType))
+				continue
+			}
+		}
+
+	}
+}
+
+func (o *OrchestratorWorker) handleResult(ctx context.Context, result *jobs.JobResult) {
+	if result.Err != nil {
+		result.Job.RetryCount++
+
+		if result.Job.RetryCount >= jobTypeMaxNumberOfRetriesMap[result.Job.JobType] {
+			errorMessage := result.Err.Error()
+			result.Job.Error = &errorMessage
+			result.Job.Status = jobs.JobStatusFailed
+
+			if saveErr := o.jobsManager.SaveFailedJob(result.Job); saveErr != nil {
+				logger.Logger.LogError().Msg(saveErr.Error())
+			}
+			logger.Logger.LogError().Msgf("Job %s failed after retries", result.Job.Uuid)
+		} else {
+			// exponential backoff with jitter
+			delay := baseRetryDelay * (1 << result.Job.RetryCount)
+			jitter := rand.Intn(int(delay / 2))
+			time.Sleep(delay + time.Duration(jitter))
+
+			logger.Logger.Debug().Msgf("Retrying job %s (attempt %d)", result.Job.Uuid, result.Job.RetryCount)
+			go func(job *jobs.Job) {
+				err := o.jobsManager.RequeueJob(ctx, job)
+				if err != nil {
+					logger.Logger.LogError().Msgf("failed to requeue job %s", result.Job.Uuid)
+				}
+			}(result.Job)
+		}
+	}
+}
