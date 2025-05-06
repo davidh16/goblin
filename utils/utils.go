@@ -8,6 +8,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -258,13 +259,27 @@ func ReadEnvFile(envFile *os.File) (map[string]string, error) {
 			env[parts[0]] = parts[1]
 		}
 	}
+
+	// Important: rewind file to beginning
+	_, err := envFile.Seek(0, 0)
+	if err != nil {
+		return nil, err
+	}
+
 	return env, scanner.Err()
 }
 
 // WriteEnvFile writes the final map to the .env file
 func writeEnvFile(file *os.File, envMap map[string]string) error {
-	for key, value := range envMap {
-		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, value))
+
+	keys := make([]string, 0, len(envMap))
+	for k := range envMap {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		_, err := file.WriteString(fmt.Sprintf("%s=%s\n", key, envMap[key]))
 		if err != nil {
 			return err
 		}
@@ -285,4 +300,11 @@ func WriteToEnvFile(file *os.File, newEnv map[string]string) error {
 	}
 
 	return writeEnvFile(file, existingEnv)
+}
+
+func MergeMaps(map1, map2 map[string]string) map[string]string {
+	for k, v := range map2 {
+		map1[k] = v // overwrites existing keys or adds new ones
+	}
+	return map1
 }

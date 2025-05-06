@@ -114,13 +114,14 @@ func databaseCmdHandler() {
 	envFilePath := path.Join(workingDirectory, ".env")
 
 	var envFile *os.File
-	envFile, err = os.OpenFile(envFilePath, os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		utils.HandleError(err, "Error opening environment file")
-	}
 	defer envFile.Close()
-
+	envDataMap := map[string]string{}
 	for _, database := range databases {
+
+		envFile, err = os.OpenFile(envFilePath, os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			utils.HandleError(err, "Error opening environment file")
+		}
 
 		database_utils.DatabaseOptionDefaultPortsMap[database.DatabaseType] = database.Port
 
@@ -129,15 +130,17 @@ func databaseCmdHandler() {
 			utils.HandleError(err, fmt.Sprintf("Error getting default env data for %s", database_utils.DatabaseOptionNamesMap[database.DatabaseType]))
 		}
 
-		err = utils.WriteToEnvFile(envFile, envData)
-		if err != nil {
-			utils.HandleError(err, fmt.Sprintf("Error writing environment file %s", envFilePath))
-		}
+		envDataMap = utils.MergeMaps(envDataMap, envData)
 
 		err = database_utils.InitializeDatabaseInstance(database)
 		if err != nil {
 			utils.HandleError(err, fmt.Sprintf("Error initializing %s database instance", database_utils.DatabaseOptionNamesMap[database.DatabaseType]))
 		}
+	}
+
+	err = utils.WriteToEnvFile(envFile, envDataMap)
+	if err != nil {
+		utils.HandleError(err, fmt.Sprintf("Error writing environment file %s", envFilePath))
 	}
 
 	return
