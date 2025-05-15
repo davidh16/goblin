@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	CentralService bool
+	CentralServiceFlag bool
 )
 
 var ServiceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "Generate custom service",
 	Run: func(cmd *cobra.Command, args []string) {
-		if CentralService {
+		if CentralServiceFlag {
 			central_service.GenerateCentralService()
 		} else {
 			serviceCmdHandler()

@@ -7,7 +7,6 @@ import (
 	"goblin/commands/model"
 	"goblin/commands/repo"
 	"goblin/commands/service"
-	"goblin/commands/service/flags/central-service"
 	"goblin/commands/workerize"
 	"os"
 
@@ -58,8 +57,7 @@ func init() {
 	repo.RepoCmd.Flags().BoolVarP(&repo.CentralRepoFlag, "central-repo", "c", false, "Generate central repository")
 
 	rootCmd.AddCommand(service.ServiceCmd)
-
-	rootCmd.AddCommand(central_service.CentralServiceCmd)
+	service.ServiceCmd.Flags().BoolVarP(&service.CentralServiceFlag, "central-service", "c", false, "Generate central service")
 
 	rootCmd.AddCommand(controller.CentralControllerCmd)
 
