@@ -123,4 +123,9 @@ func workerizeCmdHandler() {
 		}
 	}
 
+	err = workerize_utils.ImplementJobsLogic(data)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
 }
