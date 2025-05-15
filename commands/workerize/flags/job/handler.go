@@ -20,7 +20,7 @@ var JobCmd = &cobra.Command{
 
 func GenerateCustomJob() {
 
-	customJobData := workerize_utils.CustomJobData{}
+	customJobData := &workerize_utils.CustomJobData{}
 
 	workerizeInitialized := workerize_utils.IfWorkerizeIsInitialized()
 	if !workerizeInitialized {
@@ -57,7 +57,12 @@ func GenerateCustomJob() {
 		}
 
 		customJobData.JobFileName = customJobData.JobNameSnakeCase + "_job.go"
+		customJobData.JobNameCamelCase = utils.SnakeToCamel(customJobData.JobNameSnakeCase)
+		customJobData.JobNamePascalCase = utils.SnakeToPascal(customJobData.JobNameSnakeCase)
+		customJobData.JobTypeName = "JobType" + customJobData.JobNamePascalCase
 		customJobData.JobFilePath = path.Join(cli_config.CliConfig.JobsFolderPath, customJobData.JobFileName)
+		customJobData.JobMetadataName = customJobData.JobNamePascalCase + "JobMetadata"
+		customJobData.JobMetadataFileName = customJobData.JobNameSnakeCase + "_job_metadata.go"
 
 		var confirmContinue bool
 		confirmPrompt := &survey.Confirm{
@@ -97,6 +102,16 @@ func GenerateCustomJob() {
 		}
 
 		break
+	}
+
+	err := workerize_utils.GenerateCustomJobMetadataFile(customJobData)
+	if err != nil {
+		utils.HandleError(err, "Error generating custom job metadata file")
+	}
+
+	err = workerize_utils.AddCustomJobToBaseJob(customJobData)
+	if err != nil {
+		utils.HandleError(err, "Error adding custom job to base job")
 	}
 
 }

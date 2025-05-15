@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"goblin/cli_config"
 	"goblin/commands/database"
@@ -32,9 +33,14 @@ type WorkerizeData struct {
 }
 
 type CustomJobData struct {
-	JobNameSnakeCase string
-	JobFilePath      string
-	JobFileName      string
+	JobNameSnakeCase    string
+	JobNamePascalCase   string
+	JobNameCamelCase    string
+	JobTypeName         string
+	JobFilePath         string
+	JobFileName         string
+	JobMetadataFileName string
+	JobMetadataName     string
 }
 
 func InitBoilerplateWorkerizeData() *WorkerizeData {
@@ -398,4 +404,129 @@ func WorkerizeCmdHandlerCopy() {
 	}
 
 	return
+}
+
+func GenerateCustomJobMetadataFile(customJobData *CustomJobData) error {
+	tmpl, err := template.ParseFiles(CustomJobMetadataTemplateFilePath)
+	if err != nil {
+		return err
+	}
+
+	jobMetadataPath := path.Join(cli_config.CliConfig.JobsFolderPath, customJobData.JobMetadataFileName)
+
+	f, err := os.Create(jobMetadataPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
+			if err != nil {
+				return err
+			}
+			f, err = os.Create(jobMetadataPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	defer f.Close()
+
+	templateData := struct {
+		JobsPackage string
+	}{
+		JobsPackage: strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(fmt.Sprintf("✅ %s generated successfully.", customJobData.JobMetadataFileName))
+	return nil
+}
+
+func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
+	baseJobFilePath := path.Join(cli_config.CliConfig.JobsFolderPath, "job.go")
+
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, baseJobFilePath, nil, parser.AllErrors)
+	if err != nil {
+		return err
+	}
+
+	// Step 1: Add new JobType constant
+	newConst := &ast.ValueSpec{
+		Names: []*ast.Ident{ast.NewIdent(customJobData.JobNamePascalCase)},
+		Values: []ast.Expr{&ast.BinaryExpr{
+			X:  ast.NewIdent("iota"),
+			Op: token.ADD,
+			Y:  ast.NewIdent("1"), // Assumes appending to previous iota block
+		}},
+	}
+
+	// Find const declaration of JobType and append
+	for _, decl := range node.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.CONST {
+			continue
+		}
+		for _, spec := range genDecl.Specs {
+			valSpec, ok := spec.(*ast.ValueSpec)
+			if ok && valSpec.Names[0].Name == "JobTypeUnspecified" {
+				genDecl.Specs = append(genDecl.Specs, newConst)
+				break
+			}
+		}
+	}
+
+	ast.Inspect(node, func(n ast.Node) bool {
+		compositeLit, ok := n.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		switch x := compositeLit.Type.(type) {
+		case *ast.MapType:
+			// jobTypesMap
+			_, ok := x.Key.(*ast.Ident)
+			if ok {
+				_, ok := x.Value.(*ast.StructType)
+				if ok {
+					compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
+						Key:   ast.NewIdent(customJobData.JobTypeName),
+						Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
+					})
+				}
+				// jobTypeMetadataMap
+				_, ok = x.Key.(*ast.Ident)
+				if ok {
+
+					_, ok := x.Value.(*ast.Ident)
+					if ok {
+						compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
+							Key: ast.NewIdent(customJobData.JobTypeName),
+							Value: &ast.CallExpr{
+								Fun:  ast.NewIdent("reflect.TypeOf"),
+								Args: []ast.Expr{&ast.CompositeLit{Type: ast.NewIdent(customJobData.JobMetadataName)}},
+							},
+						})
+					}
+				}
+				return true
+			}
+		}
+		return true
+	})
+
+	// Write back to file
+	file, err := os.Create("job.go")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if err = printer.Fprint(file, fset, node); err != nil {
+		return err
+	}
+
+	return err
 }
