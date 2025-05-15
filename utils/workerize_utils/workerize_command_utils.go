@@ -3,10 +3,13 @@ package workerize_utils
 import (
 	"errors"
 	"fmt"
+	"github.com/AlecAivazis/survey/v2"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"goblin/cli_config"
+	"goblin/commands/database"
+	central_service "goblin/commands/service/flags/central-service"
 	"goblin/utils"
 	"goblin/utils/database_utils"
 	"os"
@@ -271,4 +274,122 @@ func IfWorkerizeIsInitialized() bool {
 		return false
 	}
 	return true
+}
+
+func WorkerizeCmdHandlerCopy() {
+	implementedDatabases, err := ListImplementedDatabases()
+	if err != nil {
+		utils.HandleError(err, "Unable to list implemented databases")
+	}
+
+	if len(implementedDatabases) > 1 {
+		var redisImplemented bool
+		for _, impl := range implementedDatabases {
+			if impl == database_utils.DatabaseOptionNamesMap[database_utils.Redis] {
+				redisImplemented = true
+				break
+			}
+		}
+
+		if !redisImplemented {
+			var confirmContinue bool
+			confirmContinuePrompt := &survey.Confirm{
+				Message: "For implementing background jobs and workers, Redis needs to be implemented, do you wish to continue with Redis implementation?",
+				Default: false,
+			}
+			err = survey.AskOne(confirmContinuePrompt, &confirmContinue)
+			if err != nil {
+				utils.HandleError(err)
+			}
+			if !confirmContinue {
+				return
+			}
+
+			err = database.ImplementRedis()
+			if err != nil {
+				utils.HandleError(err)
+			}
+		}
+
+	} else {
+
+		var confirmContinue bool
+		confirmContinuePrompt := &survey.Confirm{
+			Message: "For implementing background jobs and workers, one persistent database and Redis need to be implemented, do you wish to continue with database implementations?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmContinuePrompt, &confirmContinue)
+		if err != nil {
+			utils.HandleError(err)
+		}
+		if !confirmContinue {
+			return
+		}
+		err = database.ImplementRedisAndOtherGormDb()
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	data := InitBoilerplateWorkerizeData()
+
+	if data.JobsExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "job.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, &data.JobsOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if data.JobsManagerExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "jobs_manager.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, &data.JobsManagerOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if !data.CentralServiceExists {
+		central_service.GenerateCentralService()
+	}
+
+	if data.WorkerPoolExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "worker_pool.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, &data.WorkerPoolOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if data.OrchestratorExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "orchestrator.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, &data.OrchestratorOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	err = ImplementJobsLogic(data)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	err = ImplementWorkersLogic(data)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	return
 }

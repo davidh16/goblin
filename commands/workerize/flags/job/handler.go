@@ -3,7 +3,6 @@ package job
 import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
-	"goblin/commands/workerize"
 	"goblin/utils"
 	"goblin/utils/workerize_utils"
 )
@@ -33,7 +32,7 @@ func GenerateCustomJob() {
 			return
 		}
 
-		workerize.WorkerizeCmdHandler()
+		workerize_utils.WorkerizeCmdHandlerCopy()
 
 	}
 
