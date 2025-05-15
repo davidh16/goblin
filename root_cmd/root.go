@@ -8,6 +8,7 @@ import (
 	"goblin/commands/repo"
 	"goblin/commands/service"
 	"goblin/commands/service/flags/central-service"
+	"goblin/commands/workerize"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -61,4 +62,6 @@ func init() {
 	rootCmd.AddCommand(central_service.CentralServiceCmd)
 
 	rootCmd.AddCommand(controller.CentralControllerCmd)
+
+	rootCmd.AddCommand(workerize.WorkerizeCmd)
 }
