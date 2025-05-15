@@ -4,9 +4,12 @@ go 1.24
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
+	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jinzhu/inflection v1.0.0
+	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.8.0
+	github.com/redis/rueidis v1.0.59
 	github.com/rs/zerolog v1.34.0
 	github.com/samber/lo v1.49.1
 	github.com/spf13/cobra v1.9.1

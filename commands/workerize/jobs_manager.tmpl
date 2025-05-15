@@ -12,7 +12,7 @@ import (
 
 const RedisJobQueue = "jobs_queue"
 
-type JobsManaagerInterface interface {
+type JobsManagerInterface interface {
 	FetchAndProcessJob(ctx context.Context) (*Job, error)
 	EnqueueJob(ctx context.Context, job *Job) error
 	RequeueJob(ctx context.Context, job *Job) error
@@ -24,7 +24,7 @@ type jobManager struct {
 	gormClient  *gorm.DB
 }
 
-func NewJobsManager(client rueidis.Client, db *gorm.DB) JobsManaagerInterface {
+func NewJobsManager(client rueidis.Client, db *gorm.DB) JobsManagerInterface {
 	return &jobManager{
 		redisClient: client,
 		gormClient:  db,

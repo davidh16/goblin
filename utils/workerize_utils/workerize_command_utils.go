@@ -239,7 +239,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 			LoggerPackage  string
 		}{
 			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
-			JobsPackage:    strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+			JobsPackage:    cli_config.CliConfig.JobsFolderPath,
 			LoggerPackage:  "nesto",
 		}
 
