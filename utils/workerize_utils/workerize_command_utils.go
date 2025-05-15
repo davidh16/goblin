@@ -46,7 +46,7 @@ func InitBoilerplateWorkerizeData() *WorkerizeData {
 
 func ListImplementedDatabases() ([]string, error) {
 	var implementedDatabases []string
-	err := filepath.WalkDir(cli_config.CliConfig.RepositoriesFolderPath, func(repoPath string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(cli_config.CliConfig.DatabaseInstancesFolderPath, func(repoPath string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -81,17 +81,20 @@ func ListImplementedDatabases() ([]string, error) {
 		return nil
 	})
 	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
 		return nil, err
 	}
 	return implementedDatabases, nil
 }
 
 func ImplementJobsLogic(data *WorkerizeData) error {
-	if !data.JobsOverwrite {
+	if data.JobsOverwrite {
 
 		tmpl, err := template.ParseFiles(JobTemplateFilePath)
 		if err != nil {
-			utils.HandleError(err)
+			return err
 		}
 
 		jobPath := path.Join(cli_config.CliConfig.JobsFolderPath, "job.go")
@@ -125,7 +128,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		fmt.Println("✅ Jobs logic generated successfully.")
 	}
 
-	if !data.JobsManagerOverwrite {
+	if data.JobsManagerOverwrite {
 		tmpl, err := template.ParseFiles(JobsManagerTemplateFilePath)
 		if err != nil {
 			utils.HandleError(err)
@@ -167,11 +170,11 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 }
 
 func ImplementWorkersLogic(data *WorkerizeData) error {
-	if !data.WorkerPoolOverwrite {
+	if data.WorkerPoolOverwrite {
 
 		tmpl, err := template.ParseFiles(WorkerPoolTemplateFilePath)
 		if err != nil {
-			utils.HandleError(err)
+			return err
 		}
 
 		jobPath := path.Join(cli_config.CliConfig.WorkersFolderPath, "worker_pool.go")
@@ -196,7 +199,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 			JobsPackage    string
 		}{
 			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
-			JobsPackage:    strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+			JobsPackage:    cli_config.CliConfig.JobsFolderPath,
 		}
 
 		err = tmpl.Execute(f, templateData)
@@ -207,7 +210,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 		fmt.Println("✅ Worker pool logic generated successfully.")
 	}
 
-	if !data.OrchestratorOverwrite {
+	if data.OrchestratorOverwrite {
 		tmpl, err := template.ParseFiles(OrchestratorTemplateFilePath)
 		if err != nil {
 			utils.HandleError(err)

@@ -5,7 +5,6 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 	"log"
-	"math"
 	"os"
 	"fmt"
 )
@@ -27,4 +26,4 @@ func ConnectToMariaDB() (*gorm.DB, error) {
 	}
 	log.Println("Connected to MariaDB!")
 	return mariaDbInstance, nil
-}}
+}

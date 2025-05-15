@@ -77,10 +77,10 @@ func workerizeCmdHandler() {
 
 	if data.JobsExists {
 		confirmOverwritePrompt := &survey.Confirm{
-			Message: "jobs.go already exists, do you wish to overwrite?",
+			Message: "job.go already exists, do you wish to overwrite?",
 			Default: false,
 		}
-		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		err = survey.AskOne(confirmOverwritePrompt, &data.JobsOverwrite)
 		if err != nil {
 			utils.HandleError(err)
 		}
@@ -88,10 +88,10 @@ func workerizeCmdHandler() {
 
 	if data.JobsManagerExists {
 		confirmOverwritePrompt := &survey.Confirm{
-			Message: "jobs.go already exists, do you wish to overwrite?",
+			Message: "jobs_manager.go already exists, do you wish to overwrite?",
 			Default: false,
 		}
-		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		err = survey.AskOne(confirmOverwritePrompt, &data.JobsManagerOverwrite)
 		if err != nil {
 			utils.HandleError(err)
 		}
@@ -103,10 +103,10 @@ func workerizeCmdHandler() {
 
 	if data.WorkerPoolExists {
 		confirmOverwritePrompt := &survey.Confirm{
-			Message: "jobs.go already exists, do you wish to overwrite?",
+			Message: "worker_pool.go already exists, do you wish to overwrite?",
 			Default: false,
 		}
-		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		err = survey.AskOne(confirmOverwritePrompt, &data.WorkerPoolOverwrite)
 		if err != nil {
 			utils.HandleError(err)
 		}
@@ -114,10 +114,10 @@ func workerizeCmdHandler() {
 
 	if data.OrchestratorExists {
 		confirmOverwritePrompt := &survey.Confirm{
-			Message: "jobs.go already exists, do you wish to overwrite?",
+			Message: "orchestrator.go already exists, do you wish to overwrite?",
 			Default: false,
 		}
-		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		err = survey.AskOne(confirmOverwritePrompt, &data.OrchestratorOverwrite)
 		if err != nil {
 			utils.HandleError(err)
 		}
