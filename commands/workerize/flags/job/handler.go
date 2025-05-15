@@ -1,10 +1,13 @@
 package job
 
 import (
+	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
+	"goblin/cli_config"
 	"goblin/utils"
 	"goblin/utils/workerize_utils"
+	"path"
 )
 
 var JobCmd = &cobra.Command{
@@ -16,6 +19,9 @@ var JobCmd = &cobra.Command{
 }
 
 func GenerateCustomJob() {
+
+	customJobData := workerize_utils.CustomJobData{}
+
 	workerizeInitialized := workerize_utils.IfWorkerizeIsInitialized()
 	if !workerizeInitialized {
 
@@ -34,6 +40,63 @@ func GenerateCustomJob() {
 
 		workerize_utils.WorkerizeCmdHandlerCopy()
 
+	}
+
+	var jobName string
+	for {
+		if err := survey.AskOne(&survey.Input{
+			Message: "Please type the job file name (snake_case), keep in mind that it will get a suffix _job.go automatically:",
+			Default: "my_custom_job",
+		}, &customJobData.JobNameSnakeCase); err != nil {
+			utils.HandleError(err)
+		}
+
+		if !utils.IsSnakeCase(jobName) {
+			fmt.Printf("🛑 %s is not in snake case\n", customJobData.JobNameSnakeCase)
+			continue
+		}
+
+		customJobData.JobFileName = customJobData.JobNameSnakeCase + "_job.go"
+		customJobData.JobFilePath = path.Join(cli_config.CliConfig.JobsFolderPath, customJobData.JobFileName)
+
+		var confirmContinue bool
+		confirmPrompt := &survey.Confirm{
+			Message: fmt.Sprintf("You are about to create a repo file named %s, do you want to continue ?", customJobData.JobFileName),
+		}
+		if err := survey.AskOne(confirmPrompt, &confirmContinue); err != nil {
+			utils.HandleError(err)
+		}
+
+		if !confirmContinue {
+			continue
+		}
+
+		if utils.FileExists(customJobData.JobFilePath) {
+			var overwriteConfirmed bool
+			confirmPrompt = &survey.Confirm{
+				Message: fmt.Sprintf("%s already exists. Do you want to overwrite it ?", customJobData.JobFileName),
+				Default: false,
+			}
+			if err := survey.AskOne(confirmPrompt, &overwriteConfirmed); err != nil {
+				utils.HandleError(err)
+			}
+
+			if overwriteConfirmed {
+				confirmPrompt = &survey.Confirm{
+					Message: fmt.Sprintf("Are you sure you want to overwrite %s ?", customJobData.JobFileName),
+					Default: false,
+				}
+				if err := survey.AskOne(confirmPrompt, &overwriteConfirmed); err != nil {
+					utils.HandleError(err)
+				}
+			}
+
+			if !overwriteConfirmed {
+				continue
+			}
+		}
+
+		break
 	}
 
 }

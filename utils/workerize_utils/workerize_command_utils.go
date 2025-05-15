@@ -31,6 +31,12 @@ type WorkerizeData struct {
 	CentralServiceExists  bool
 }
 
+type CustomJobData struct {
+	JobNameSnakeCase string
+	JobFilePath      string
+	JobFileName      string
+}
+
 func InitBoilerplateWorkerizeData() *WorkerizeData {
 	data := &WorkerizeData{
 		JobsOverwrite:         true,
