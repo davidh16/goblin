@@ -33,15 +33,21 @@ type WorkerizeData struct {
 }
 
 type CustomJobData struct {
-	JobNameSnakeCase    string
-	JobNamePascalCase   string
-	JobNameCamelCase    string
-	JobTypeName         string
-	JobFilePath         string
-	JobFileName         string
-	JobMetadataFileName string
-	JobMetadataName     string
-	AlreadyExists       bool
+	JobNameSnakeCase          string
+	JobNamePascalCase         string
+	JobNameCamelCase          string
+	JobTypeName               string
+	JobFilePath               string
+	JobFileName               string
+	JobMetadataFileName       string
+	JobMetadataName           string
+	AlreadyExists             bool
+	CreateWorkerPool          bool
+	WorkerPoolName            string
+	WorkerPoolOverwrite       bool
+	WorkerPoolExists          bool
+	WorkerPoolSize            int
+	WorkerPoolNumberOfRetries int
 }
 
 func InitBoilerplateWorkerizeData() *WorkerizeData {
