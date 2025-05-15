@@ -4,6 +4,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"goblin/commands/database"
+	central_service "goblin/commands/service/flags/central-service"
 	"goblin/utils"
 	"goblin/utils/database_utils"
 	"goblin/utils/workerize_utils"
@@ -18,7 +19,6 @@ var WorkerizeCmd = &cobra.Command{
 }
 
 func workerizeCmdHandler() {
-	//todo provjeriti ima li implementirane redis i neku od gorm bazi
 	implementedDatabases, err := workerize_utils.ListImplementedDatabases()
 	if err != nil {
 		utils.HandleError(err, "Unable to list implemented databases")
@@ -68,6 +68,56 @@ func workerizeCmdHandler() {
 			return
 		}
 		err = database.ImplementRedisAndOtherGormDb()
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	data := workerize_utils.InitBoilerplateWorkerizeData()
+
+	if data.JobsExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "jobs.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if data.JobsManagerExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "jobs.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if !data.CentralServiceExists {
+		central_service.GenerateCentralService()
+	}
+
+	if data.WorkerPoolExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "jobs.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if data.OrchestratorExists {
+		confirmOverwritePrompt := &survey.Confirm{
+			Message: "jobs.go already exists, do you wish to overwrite?",
+			Default: false,
+		}
+		err = survey.AskOne(confirmOverwritePrompt, data.JobsOverwrite)
 		if err != nil {
 			utils.HandleError(err)
 		}

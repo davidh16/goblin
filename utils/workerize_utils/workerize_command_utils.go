@@ -5,11 +5,36 @@ import (
 	"go/parser"
 	"go/token"
 	"goblin/cli_config"
+	"goblin/utils"
 	"goblin/utils/database_utils"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
+
+type WorkerizeData struct {
+	JobsExists            bool
+	JobsOverwrite         bool
+	JobsManagerExists     bool
+	JobsManagerOverwrite  bool
+	OrchestratorExists    bool
+	OrchestratorOverwrite bool
+	WorkerPoolExists      bool
+	WorkerPoolOverwrite   bool
+	CentralServiceExists  bool
+}
+
+func InitBoilerplateWorkerizeData() *WorkerizeData {
+	data := &WorkerizeData{}
+
+	data.JobsExists = utils.FileExists(path.Join(cli_config.CliConfig.JobsFolderPath, "job.go"))
+	data.JobsManagerExists = utils.FileExists(path.Join(cli_config.CliConfig.JobsFolderPath, "jobs_manager.go"))
+	data.OrchestratorExists = utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, "orchestrator.go"))
+	data.WorkerPoolExists = utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, "worker_pool.go"))
+	data.CentralServiceExists = utils.FileExists(path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go"))
+	return data
+}
 
 func ListImplementedDatabases() ([]string, error) {
 	var implementedDatabases []string
