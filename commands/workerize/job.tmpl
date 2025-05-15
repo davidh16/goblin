@@ -44,20 +44,15 @@ const (
 )
 const (
 	JobTypeUnspecified JobType = iota
-	JobTypeS3EmailAttachmentUpload
 )
 
 // jobTypesMap defines the set of supported job types for validation.
 // Used in ProcessJob to ensure only known job types are processed.
-var jobTypesMap = map[JobType]struct{}{
-	JobTypeS3EmailAttachmentUpload: {},
-}
+var jobTypesMap = map[JobType]struct{}{}
 
 // jobTypeMetadataMap maps each JobType to the expected Go struct type
 // for the job's metadata. Used to validate and parse metadata dynamically.
-var jobTypeMetadataMap = map[JobType]reflect.Type{
-	JobTypeS3EmailAttachmentUpload: reflect.TypeOf(S3EmailAttachmentJobMetadata{}),
-}
+var jobTypeMetadataMap = map[JobType]reflect.Type{}
 
 // ParseMetadata unmarshals raw JSON into a specific typed metadata struct.
 // T must be a struct type matching the job type's expected metadata format.
