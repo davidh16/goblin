@@ -240,7 +240,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 		}{
 			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
 			JobsPackage:    cli_config.CliConfig.JobsFolderPath,
-			LoggerPackage:  "nesto",
+			LoggerPackage:  cli_config.CliConfig.LoggerFolderPath,
 		}
 
 		err = tmpl.Execute(f, templateData)
@@ -253,4 +253,22 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 	}
 
 	return nil
+}
+
+func IfWorkerizeIsInitialized() bool {
+	exists := utils.FileExists(path.Join(cli_config.CliConfig.JobsFolderPath, "job.go"))
+	if !exists {
+		return false
+	}
+
+	exists = utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, "orchestrator.go"))
+	if !exists {
+		return false
+	}
+
+	exists = utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, "worker_pool.go"))
+	if !exists {
+		return false
+	}
+	return true
 }

@@ -1,0 +1,5 @@
+package {{.JobsPackage}}
+
+type {{.JobName}}JobMetadata struct {}
+
+var _ JobMetadata = (*{{.JobName}}JobMetadata)(nil)
