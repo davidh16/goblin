@@ -41,6 +41,7 @@ type CustomJobData struct {
 	JobFileName         string
 	JobMetadataFileName string
 	JobMetadataName     string
+	AlreadyExists       bool
 }
 
 func InitBoilerplateWorkerizeData() *WorkerizeData {
@@ -430,9 +431,11 @@ func GenerateCustomJobMetadataFile(customJobData *CustomJobData) error {
 	defer f.Close()
 
 	templateData := struct {
-		JobsPackage string
+		JobsPackage     string
+		JobMetadataName string
 	}{
-		JobsPackage: strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+		JobsPackage:     strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+		JobMetadataName: customJobData.JobMetadataName,
 	}
 
 	err = tmpl.Execute(f, templateData)
@@ -455,7 +458,7 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 
 	// Step 1: Add new JobType constant
 	newConst := &ast.ValueSpec{
-		Names: []*ast.Ident{ast.NewIdent(customJobData.JobNamePascalCase)},
+		Names: []*ast.Ident{ast.NewIdent(customJobData.JobTypeName)},
 		Values: []ast.Expr{&ast.BinaryExpr{
 			X:  ast.NewIdent("iota"),
 			Op: token.ADD,
@@ -518,7 +521,7 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 	})
 
 	// Write back to file
-	file, err := os.Create("job.go")
+	file, err := os.Create(baseJobFilePath)
 	if err != nil {
 		return err
 	}

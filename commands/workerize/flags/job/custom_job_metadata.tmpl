@@ -1,5 +1,5 @@
 package {{.JobsPackage}}
 
-type {{.JobName}}JobMetadata struct {}
+type {{.JobMetadataName}} struct {}
 
-var _ JobMetadata = (*{{.JobName}}JobMetadata)(nil)
+var _ JobMetadata = (*{{.JobMetadataName}})(nil)

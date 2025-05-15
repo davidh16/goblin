@@ -42,7 +42,6 @@ func GenerateCustomJob() {
 
 	}
 
-	var jobName string
 	for {
 		if err := survey.AskOne(&survey.Input{
 			Message: "Please type the job file name (snake_case), keep in mind that it will get a suffix _job.go automatically:",
@@ -51,7 +50,7 @@ func GenerateCustomJob() {
 			utils.HandleError(err)
 		}
 
-		if !utils.IsSnakeCase(jobName) {
+		if !utils.IsSnakeCase(customJobData.JobNameSnakeCase) {
 			fmt.Printf("🛑 %s is not in snake case\n", customJobData.JobNameSnakeCase)
 			continue
 		}
@@ -66,7 +65,7 @@ func GenerateCustomJob() {
 
 		var confirmContinue bool
 		confirmPrompt := &survey.Confirm{
-			Message: fmt.Sprintf("You are about to create a repo file named %s, do you want to continue ?", customJobData.JobFileName),
+			Message: fmt.Sprintf("You are about to create a custom job file named %s, do you want to continue ?", customJobData.JobFileName),
 		}
 		if err := survey.AskOne(confirmPrompt, &confirmContinue); err != nil {
 			utils.HandleError(err)
@@ -94,6 +93,7 @@ func GenerateCustomJob() {
 				if err := survey.AskOne(confirmPrompt, &overwriteConfirmed); err != nil {
 					utils.HandleError(err)
 				}
+				customJobData.AlreadyExists = true
 			}
 
 			if !overwriteConfirmed {
@@ -109,9 +109,11 @@ func GenerateCustomJob() {
 		utils.HandleError(err, "Error generating custom job metadata file")
 	}
 
-	err = workerize_utils.AddCustomJobToBaseJob(customJobData)
-	if err != nil {
-		utils.HandleError(err, "Error adding custom job to base job")
+	if !customJobData.AlreadyExists {
+		err = workerize_utils.AddCustomJobToBaseJob(customJobData)
+		if err != nil {
+			utils.HandleError(err, "Error adding custom job to base job")
+		}
 	}
 
 }
