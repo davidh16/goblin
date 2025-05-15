@@ -62,5 +62,5 @@ func init() {
 	rootCmd.AddCommand(controller.CentralControllerCmd)
 
 	rootCmd.AddCommand(workerize.WorkerizeCmd)
-	workerize.WorkerizeCmd.Flags().BoolVarP(&workerize.CustomJobFlag, "job", "c", false, "Generate custom job")
+	workerize.WorkerizeCmd.Flags().BoolVarP(&workerize.CustomJobFlag, "job", "j", false, "Generate custom job")
 }
