@@ -5,20 +5,27 @@ import (
 	"github.com/spf13/cobra"
 	"goblin/commands/database"
 	central_service "goblin/commands/service/flags/central-service"
+	"goblin/commands/workerize/flags/job"
 	"goblin/utils"
 	"goblin/utils/database_utils"
 	"goblin/utils/workerize_utils"
 )
 
+var CustomJobFlag bool
+
 var WorkerizeCmd = &cobra.Command{
 	Use:   "workerize",
 	Short: "Generate workers and jobs logic",
 	Run: func(cmd *cobra.Command, args []string) {
-		workerizeCmdHandler()
+		if CustomJobFlag {
+			job.GenerateCustomJob()
+		} else {
+			WorkerizeCmdHandler()
+		}
 	},
 }
 
-func workerizeCmdHandler() {
+func WorkerizeCmdHandler() {
 	implementedDatabases, err := workerize_utils.ListImplementedDatabases()
 	if err != nil {
 		utils.HandleError(err, "Unable to list implemented databases")
