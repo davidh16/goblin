@@ -149,14 +149,15 @@ func databaseCmdHandler() {
 
 func ImplementRedisAndOtherGormDb() error {
 	var selectedDatabaseNames []string
-	preselectedOptions := []string{database_utils.DatabaseOptionNamesMap[database_utils.Redis]}
+	var preselectedOptions []string
 	var redisImplemented bool
 	var gormDatabaseImplemented bool
 
 	for {
+		preselectedOptions = []string{database_utils.DatabaseOptionNamesMap[database_utils.Redis]}
 		selectDatabasesPrompt := &survey.MultiSelect{
 			Message: "Which databases do you want to use?",
-			Options: database_utils.GetSortedDatabaseOptionsWithoutRedis(),
+			Options: database_utils.GetSortedDatabaseOptions(),
 			Default: preselectedOptions,
 		}
 		err := survey.AskOne(selectDatabasesPrompt, &selectedDatabaseNames)
@@ -172,7 +173,7 @@ func ImplementRedisAndOtherGormDb() error {
 				redisImplemented = true
 			}
 
-			if databaseName == database_utils.DatabaseOptionDefaultPortsMap[database_utils.PostgresSQL] || databaseName == database_utils.DatabaseOptionDefaultPortsMap[database_utils.MariaDB] {
+			if databaseName == database_utils.DatabaseOptionNamesMap[database_utils.PostgresSQL] || databaseName == database_utils.DatabaseOptionNamesMap[database_utils.MariaDB] {
 				gormDatabaseImplemented = true
 			}
 
@@ -236,8 +237,6 @@ func ImplementRedisAndOtherGormDb() error {
 	selectedDatabaseOptions := lo.Map(selectedDatabaseNames, func(item string, index int) database_utils.DatabaseOption {
 		return database_utils.DatabaseNameOptionsMap[item]
 	})
-
-	selectedDatabaseOptions = append(selectedDatabaseOptions, database_utils.Redis)
 
 	var databases []database_utils.DatabaseData
 	for _, databaseOption := range selectedDatabaseOptions {
