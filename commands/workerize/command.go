@@ -128,4 +128,10 @@ func workerizeCmdHandler() {
 		utils.HandleError(err)
 	}
 
+	err = workerize_utils.ImplementWorkersLogic(data)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	return
 }

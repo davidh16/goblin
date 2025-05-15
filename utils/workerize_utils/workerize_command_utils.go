@@ -99,7 +99,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		f, err := os.Create(jobPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
+				err = os.Mkdir(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
 				if err != nil {
 					return err
 				}
@@ -136,7 +136,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		f, err := os.Create(jobPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
+				err = os.Mkdir(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
 				if err != nil {
 					return err
 				}
@@ -160,6 +160,92 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		}
 
 		fmt.Println("✅ Jobs manager logic generated successfully.")
+
+	}
+
+	return nil
+}
+
+func ImplementWorkersLogic(data *WorkerizeData) error {
+	if !data.WorkerPoolOverwrite {
+
+		tmpl, err := template.ParseFiles(WorkerPoolTemplateFilePath)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		jobPath := path.Join(cli_config.CliConfig.WorkersFolderPath, "worker_pool.go")
+
+		f, err := os.Create(jobPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				err = os.Mkdir(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
+				if err != nil {
+					return err
+				}
+				f, err = os.Create(jobPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		defer f.Close()
+
+		templateData := struct {
+			WorkersPackage string
+			JobsPackage    string
+		}{
+			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
+			JobsPackage:    strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+		}
+
+		err = tmpl.Execute(f, templateData)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("✅ Worker pool logic generated successfully.")
+	}
+
+	if !data.OrchestratorOverwrite {
+		tmpl, err := template.ParseFiles(OrchestratorTemplateFilePath)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		jobPath := path.Join(cli_config.CliConfig.WorkersFolderPath, "orchestrator.go")
+
+		f, err := os.Create(jobPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				err = os.Mkdir(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
+				if err != nil {
+					return err
+				}
+				f, err = os.Create(jobPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		defer f.Close()
+
+		templateData := struct {
+			WorkersPackage string
+			JobsPackage    string
+			LoggerPackage  string
+		}{
+			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
+			JobsPackage:    strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+			LoggerPackage:  "nesto",
+		}
+
+		err = tmpl.Execute(f, templateData)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("✅ Orchestrator worker logic generated successfully.")
 
 	}
 

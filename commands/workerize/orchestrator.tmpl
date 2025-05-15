@@ -1,4 +1,4 @@
-package workers
+package {{.WorkersPackage}}
 
 import (
 	"context"
@@ -16,10 +16,10 @@ const baseRetryDelay = 2 * time.Second
 var jobTypeMaxNumberOfRetriesMap = map[jobs.JobType]int{}
 
 type OrchestratorWorker struct {
-	jobsManager      jobs.JobsManaagerInterface
+	jobsManager      jobs.JobsManagerInterface
 }
 
-func NewOrchestratorWorker(jobsManager jobs.JobsManaagerInterface, service *services.CentralService) *OrchestratorWorker {
+func NewOrchestratorWorker(jobsManager jobs.JobsManagerInterface, service *services.CentralService) *OrchestratorWorker {
 	return &OrchestratorWorker{
 		jobsManager:      jobsManager,
 	}
