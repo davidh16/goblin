@@ -481,40 +481,51 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 		}
 	}
 
+	// Step 2: Update jobTypesMap and jobTypeMetadataMap
 	ast.Inspect(node, func(n ast.Node) bool {
-		compositeLit, ok := n.(*ast.CompositeLit)
+		genDecl, ok := n.(*ast.GenDecl)
 		if !ok {
 			return true
 		}
 
-		switch x := compositeLit.Type.(type) {
-		case *ast.MapType:
-			// jobTypesMap
-			_, ok := x.Key.(*ast.Ident)
-			if ok {
-				_, ok := x.Value.(*ast.StructType)
-				if ok {
-					compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
-						Key:   ast.NewIdent(customJobData.JobTypeName),
-						Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
-					})
-				}
-				// jobTypeMetadataMap
-				_, ok = x.Key.(*ast.Ident)
-				if ok {
+		for _, spec := range genDecl.Specs {
+			valSpec, ok := spec.(*ast.ValueSpec)
+			if !ok || len(valSpec.Names) == 0 || len(valSpec.Values) == 0 {
+				continue
+			}
 
-					_, ok := x.Value.(*ast.Ident)
-					if ok {
-						compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
-							Key: ast.NewIdent(customJobData.JobTypeName),
-							Value: &ast.CallExpr{
-								Fun:  ast.NewIdent("reflect.TypeOf"),
-								Args: []ast.Expr{&ast.CompositeLit{Type: ast.NewIdent(customJobData.JobMetadataName)}},
-							},
-						})
-					}
-				}
-				return true
+			name := valSpec.Names[0].Name
+			cl, ok := valSpec.Values[0].(*ast.CompositeLit)
+			if !ok {
+				continue
+			}
+
+			mapType, ok := cl.Type.(*ast.MapType)
+			if !ok {
+				continue
+			}
+
+			keyIdent, ok := mapType.Key.(*ast.Ident)
+			if !ok || keyIdent.Name != "JobType" {
+				continue
+			}
+
+			switch name {
+			case "jobTypesMap":
+				cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+					Key:   ast.NewIdent(customJobData.JobTypeName),
+					Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
+				})
+			case "jobTypeMetadataMap":
+				cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+					Key: ast.NewIdent(customJobData.JobTypeName),
+					Value: &ast.CallExpr{
+						Fun: ast.NewIdent("reflect.TypeOf"),
+						Args: []ast.Expr{&ast.CompositeLit{
+							Type: ast.NewIdent(customJobData.JobMetadataName),
+						}},
+					},
+				})
 			}
 		}
 		return true
