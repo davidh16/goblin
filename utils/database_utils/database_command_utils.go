@@ -170,3 +170,15 @@ func GetSortedDatabaseOptions() []string {
 	}
 	return sortedDatabaseOptions
 }
+
+func GetSortedDatabaseOptionsWithoutRedis() []string {
+	var sortedDatabaseOptions []string
+	for i := range len(DatabaseOptionNamesMap) {
+		if DatabaseOption(i) == Unspecified || DatabaseOption(i) == Redis {
+			continue
+		}
+
+		sortedDatabaseOptions = append(sortedDatabaseOptions, DatabaseOptionNamesMap[DatabaseOption(i)])
+	}
+	return sortedDatabaseOptions
+}
