@@ -17,7 +17,7 @@ var jobTypeMaxNumberOfRetriesMap = map[jobs.JobType]int{}
 
 type OrchestratorWorker struct {
 	jobsManager      jobs.JobsManagerInterface
-	centralService  *services.CentralService
+	centralService   *services.CentralService
 }
 
 func NewOrchestratorWorker(jobsManager jobs.JobsManagerInterface, centralService *services.CentralService) *OrchestratorWorker {
