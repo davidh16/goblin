@@ -2,9 +2,9 @@ package {{.WorkersPackage}}
 
 import (
 	"context"
-	{{.JobsPackage}}
-	{{.RepositoryPackage}}
-	{{.LoggerPackage}}
+	{{.JobsPackageImport}}
+	{{.RepositoryPackageImport}}
+	{{.LoggerPackageImport}}
 	"time"
 )
 
@@ -43,7 +43,7 @@ func (worker *S3UploadWorkerPool) Start(ctx context.Context, jobChan chan *jobs.
 					if job.NextAttemptAt != nil {
 						if time.Now().Before(*job.NextAttemptAt) {
 							delay := time.Until(*job.NextAttemptAt)
-							utils.Logger.Debug().Msgf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay)
+							{{.LoggerPackage}}.Logger.Debug().Msgf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay)
 							time.AfterFunc(delay, func() {
 								resultChan <- worker.S3UploadWorker.HandleJob(ctx, job)
 							})
@@ -61,7 +61,7 @@ func (worker *S3UploadWorkerPool) Start(ctx context.Context, jobChan chan *jobs.
 
 func (w *{{.WorkerName}}) HandleJob(ctx context.Context, job *jobs.Job) *jobs.JobResult {
 
-	utils.Logger.LogDebug().Msgf("Handling job: %v", job.Uuid)
+	{{.LoggerPackage}}.Logger.LogDebug().Msgf("Handling job: %v", job.Uuid)
 
 	_, err := jobs.ParseMetadata[jobs.{{.CustomJobMetadataName}}](job.Metadata)
 	if err != nil {
