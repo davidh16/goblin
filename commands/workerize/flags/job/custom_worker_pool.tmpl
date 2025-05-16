@@ -1,0 +1,79 @@
+package {{.WorkersPackage}}
+
+import (
+	"context"
+	{{.JobsPackage}}
+	{{.RepositoryPackage}}
+	{{.LoggerPackage}}
+	"time"
+)
+
+type {{.WorkerPoolName}} struct {
+	poolSize       int
+	maxRetries     int
+	{{.WorkerName}} WorkerInterface
+}
+
+type {{.WorkerName}} struct {
+	{{.WorkerImplementations}}
+}
+
+func New{{.WorkerPoolName}}(poolSize int, maxRetries int) *{{.WorkerPoolName}} {
+	return &{{.WorkerPoolName}}{
+		poolSize:       {{.WorkerPoolSize}},
+		maxRetries:     {{.NumberOfRetries}},
+		{{.WorkerName}}: New{{.WorkerName}}(),
+	}
+}
+
+func New{{.WorkerName}}() *{{.WorkerName}} {
+	return &{{.WorkerName}}{
+		{{.Implementations}}
+	}
+}
+
+func (worker *S3UploadWorkerPool) Start(ctx context.Context, jobChan chan *jobs.Job, resultChan chan *jobs.JobResult) {
+	for i := 0; i < worker.poolSize; i++ {
+		go func(workerID int) {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case job := <-jobChan:
+					if job.NextAttemptAt != nil {
+						if time.Now().Before(*job.NextAttemptAt) {
+							delay := time.Until(*job.NextAttemptAt)
+							utils.Logger.Debug().Msgf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay)
+							time.AfterFunc(delay, func() {
+								resultChan <- worker.S3UploadWorker.HandleJob(ctx, job)
+							})
+
+							continue
+						}
+					}
+
+					resultChan <- worker.{{.WorkerName}}.HandleJob(ctx, job)
+				}
+			}
+		}(i)
+	}
+}
+
+func (w *{{.WorkerName}}) HandleJob(ctx context.Context, job *jobs.Job) *jobs.JobResult {
+
+	utils.Logger.LogDebug().Msgf("Handling job: %v", job.Uuid)
+
+	_, err := jobs.ParseMetadata[jobs.{{.CustomJobMetadataName}}](job.Metadata)
+	if err != nil {
+		return &jobs.JobResult{
+			Err: err,
+			Job: job,
+		}
+	}
+
+
+	return &jobs.JobResult{
+		Job: job,
+		Err: nil,
+	}
+}
