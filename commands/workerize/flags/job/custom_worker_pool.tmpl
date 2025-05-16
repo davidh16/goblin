@@ -18,15 +18,15 @@ type {{.WorkerName}} struct {
 	{{.WorkerImplementations}}
 }
 
-func New{{.WorkerPoolName}}(poolSize int, maxRetries int) *{{.WorkerPoolName}} {
+func New{{.WorkerPoolName}}(poolSize int, maxRetries int, centralService *{{.ServicePackage}}.CentralService) *{{.WorkerPoolName}} {
 	return &{{.WorkerPoolName}}{
 		poolSize:       {{.WorkerPoolSize}},
 		maxRetries:     {{.NumberOfRetries}},
-		{{.WorkerName}}: New{{.WorkerName}}(),
+		{{.WorkerName}}: New{{.WorkerName}}(centralService),
 	}
 }
 
-func New{{.WorkerName}}() *{{.WorkerName}} {
+func New{{.WorkerName}}(centralService *{{.ServicePackage}}.CentralService) *{{.WorkerName}} {
 	return &{{.WorkerName}}{
 		{{.Implementations}}
 	}
