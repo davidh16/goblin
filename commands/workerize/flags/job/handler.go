@@ -145,9 +145,16 @@ func GenerateCustomJob() {
 								fmt.Printf("🛑 %s is not in snake case\n", customJobData.WorkerPoolNameSnakeCase)
 								continue
 							}
+
+							customJobData.WorkerPoolNameSnakeCase = customJobData.WorkerPoolNameSnakeCase + "_worker_pool"
+							customJobData.WorkerPoolNamePascalCase = utils.SnakeToPascal(customJobData.WorkerPoolNameSnakeCase)
+							customJobData.WorkerPoolNameCamelCase = utils.SnakeToCamel(customJobData.WorkerPoolNameSnakeCase)
+							customJobData.WorkerPoolFileName = customJobData.WorkerPoolNameSnakeCase + "_worker_pool.go"
+							customJobData.WorkerName = customJobData.JobNamePascalCase + "Worker"
 						}
 					}
 				} else {
+					customJobData.WorkerPoolExists = workerPoolFileExists
 					break
 				}
 			}

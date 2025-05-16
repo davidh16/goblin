@@ -51,6 +51,7 @@ type CustomJobData struct {
 	WorkerPoolExists          bool
 	WorkerPoolSize            int
 	WorkerPoolNumberOfRetries int
+	WorkerName                string
 }
 
 func InitBoilerplateWorkerizeData() *WorkerizeData {
