@@ -10,7 +10,7 @@ import (
 var EditCliConfigFlag bool
 
 var ConfigCmd = &cobra.Command{
-	Use:   "goblin-config",
+	Use:   "config",
 	Short: "Show goblin cli_config file content",
 	Run: func(cmd *cobra.Command, args []string) {
 		if EditCliConfigFlag {

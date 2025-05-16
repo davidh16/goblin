@@ -137,7 +137,6 @@ func serviceCmdHandler() {
 	}
 
 	var toImplement bool
-	var selectedMethods []string
 	switch serviceData.RepoStrategy {
 	case service_utils.RepoStrategyNewRepo:
 		var decision string
@@ -232,8 +231,8 @@ func serviceCmdHandler() {
 		}
 	}
 
-	if len(selectedMethods) > 0 {
-		err = service_utils.CopyRepoMethodsToService(serviceData, selectedMethods)
+	if len(serviceData.SelectedServiceProxyMethodToImplement) > 0 {
+		err = service_utils.CopyRepoMethodsToService(serviceData, serviceData.SelectedServiceProxyMethodToImplement)
 		if err != nil {
 			utils.HandleError(err)
 		}

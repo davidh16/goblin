@@ -420,7 +420,7 @@ func NewRepoMethod(repoMethod Method, repoEntity, modelEntity string) method {
 				},
 			},
 			Body: &ast.BlockStmt{
-				List: generateMethodBody(repoMethod, modelEntity),
+				List: generateMethodBody(repoMethod, modelEntity, modelType),
 			},
 		},
 	}

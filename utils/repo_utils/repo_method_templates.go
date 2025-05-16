@@ -4,7 +4,6 @@ import (
 	"github.com/jinzhu/inflection"
 	"go/ast"
 	"go/token"
-	"goblin/cli_config"
 	"goblin/utils"
 )
 
@@ -140,8 +139,7 @@ var generateDeleteMethodBody = func(modelPascalCase string) []ast.Stmt {
 	}
 }
 
-var generateListAllMethodBody = func(modelPascalCase string) []ast.Stmt {
-	modelsPackage := cli_config.CliConfig.ModelsFolderPath + "."
+var generateListAllMethodBody = func(modelPascalCase, modelDataType string) []ast.Stmt {
 	return []ast.Stmt{
 		&ast.DeclStmt{
 			Decl: &ast.GenDecl{
@@ -150,7 +148,7 @@ var generateListAllMethodBody = func(modelPascalCase string) []ast.Stmt {
 					&ast.ValueSpec{
 						Names: []*ast.Ident{ast.NewIdent(inflection.Plural(utils.PascalToCamel(modelPascalCase)))},
 						Type: &ast.ArrayType{
-							Elt: ast.NewIdent(modelsPackage + modelPascalCase),
+							Elt: ast.NewIdent(modelDataType),
 						},
 					},
 				},
@@ -212,8 +210,7 @@ var generateListWithPaginationMethodBody = func(model string) []ast.Stmt {
 	}
 }
 
-var generateGetByUuidMethodBody = func(modelPascalCase string) []ast.Stmt {
-	modelsPackage := cli_config.CliConfig.ModelsFolderPath + "."
+var generateGetByUuidMethodBody = func(modelPascalCase, modelDataType string) []ast.Stmt {
 	return []ast.Stmt{
 		&ast.DeclStmt{
 			Decl: &ast.GenDecl{
@@ -221,7 +218,7 @@ var generateGetByUuidMethodBody = func(modelPascalCase string) []ast.Stmt {
 				Specs: []ast.Spec{
 					&ast.ValueSpec{
 						Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(modelPascalCase))},
-						Type:  ast.NewIdent("*" + modelsPackage + modelPascalCase),
+						Type:  ast.NewIdent("*" + modelDataType),
 					},
 				},
 			},
@@ -279,7 +276,7 @@ var generateGetByUuidMethodBody = func(modelPascalCase string) []ast.Stmt {
 	}
 }
 
-func generateMethodBody(repoMethod Method, modelPascalCase string) []ast.Stmt {
+func generateMethodBody(repoMethod Method, modelPascalCase, modelDataType string) []ast.Stmt {
 
 	switch repoMethod {
 	case Create:
@@ -289,11 +286,11 @@ func generateMethodBody(repoMethod Method, modelPascalCase string) []ast.Stmt {
 	case Delete:
 		return generateDeleteMethodBody(modelPascalCase)
 	case ListAll:
-		return generateListAllMethodBody(modelPascalCase)
+		return generateListAllMethodBody(modelPascalCase, modelDataType)
 	case ListWithPagination:
 		return generateListWithPaginationMethodBody(utils.PascalToCamel(modelPascalCase))
 	case GetByUuid:
-		return generateGetByUuidMethodBody(modelPascalCase)
+		return generateGetByUuidMethodBody(modelPascalCase, modelDataType)
 	default:
 		return []ast.Stmt{
 			&ast.ReturnStmt{
