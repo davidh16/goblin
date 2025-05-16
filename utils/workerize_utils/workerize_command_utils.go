@@ -43,7 +43,10 @@ type CustomJobData struct {
 	JobMetadataName           string
 	AlreadyExists             bool
 	CreateWorkerPool          bool
-	WorkerPoolName            string
+	WorkerPoolNameSnakeCase   string
+	WorkerPoolNamePascalCase  string
+	WorkerPoolNameCamelCase   string
+	WorkerPoolFileName        string
 	WorkerPoolOverwrite       bool
 	WorkerPoolExists          bool
 	WorkerPoolSize            int

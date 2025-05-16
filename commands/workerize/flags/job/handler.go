@@ -101,6 +101,59 @@ func GenerateCustomJob() {
 			}
 		}
 
+		customJobData.WorkerPoolFileName = customJobData.JobNameSnakeCase + "_worker_pool.go"
+
+		implementWorkerPoolPrompt := &survey.Confirm{
+			Message: fmt.Sprintf("Do you want to implement a worker pool (%s) for %s ?", customJobData.WorkerPoolFileName, customJobData.JobNamePascalCase),
+			Default: false,
+		}
+		if err := survey.AskOne(implementWorkerPoolPrompt, &customJobData.CreateWorkerPool); err != nil {
+			utils.HandleError(err)
+		}
+
+		if customJobData.CreateWorkerPool {
+
+			customJobData.WorkerPoolNamePascalCase = customJobData.JobNamePascalCase + "WorkerPool"
+			customJobData.WorkerPoolNameSnakeCase = customJobData.JobNameSnakeCase + "_worker_pool"
+
+			for {
+				workerPoolFileExists := utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, customJobData.WorkerPoolFileName))
+				if workerPoolFileExists {
+
+					options := []string{"Overwrite", fmt.Sprintf("Rename %v", customJobData.WorkerPoolFileName)}
+					var selectedOption string
+					workerPoolOverwriteStrategyPrompt := &survey.MultiSelect{
+						Message: fmt.Sprintf("Worker pool file %s already exists, please specify if you want to rename your custom worker pool or to overwrite existing one", customJobData.WorkerPoolFileName),
+						Options: options,
+					}
+					if err := survey.AskOne(workerPoolOverwriteStrategyPrompt, &selectedOption); err != nil {
+						utils.HandleError(err)
+					}
+
+					if selectedOption == "Overwrite" {
+						customJobData.WorkerPoolOverwrite = true
+					} else {
+						for {
+							if err := survey.AskOne(&survey.Input{
+								Message: "Please type in custom worker pool name (snake_case), keep in mind that it will get a suffix _worker_pool.go automatically:",
+								Default: customJobData.WorkerPoolNameSnakeCase,
+							}, &customJobData.WorkerPoolNameSnakeCase); err != nil {
+								utils.HandleError(err)
+							}
+
+							if !utils.IsSnakeCase(customJobData.WorkerPoolNameSnakeCase) {
+								fmt.Printf("🛑 %s is not in snake case\n", customJobData.WorkerPoolNameSnakeCase)
+								continue
+							}
+						}
+					}
+				} else {
+					break
+				}
+			}
+
+		}
+
 		break
 	}
 
