@@ -176,4 +176,12 @@ func GenerateCustomJob() {
 		}
 	}
 
+	if customJobData.CreateWorkerPool {
+
+		if !customJobData.WorkerPoolExists || (customJobData.WorkerPoolExists && customJobData.WorkerPoolOverwrite) {
+			// kreiraj
+		}
+	}
+
+	return
 }
