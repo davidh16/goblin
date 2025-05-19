@@ -1,0 +1,183 @@
+package {{.LoggerPackage}}
+
+import (
+	"fmt"
+	"github.com/Graylog2/go-gelf/gelf"
+	"os"
+	"strings"
+	"time"
+	"github.com/labstack/gommon/color"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/pkgerrors"
+)
+
+type CustomLogger struct {
+	zerolog.Logger
+	GelfWriter    *gelf.Writer
+}
+
+type ZerologEventWrapper struct {
+	*zerolog.Event
+	Level zerolog.Level
+}
+
+// gelfLogLevelsMap maps zerolog log levels to GELF syslog levels.
+var gelfLogLevelsMap = map[zerolog.Level]int32{
+	zerolog.InfoLevel:  gelf.LOG_INFO,
+	zerolog.DebugLevel: gelf.LOG_DEBUG,
+	zerolog.WarnLevel:  gelf.LOG_WARNING,
+	zerolog.ErrorLevel: gelf.LOG_ERR,
+	zerolog.FatalLevel: gelf.LOG_CRIT,
+}
+
+var Logger CustomLogger
+
+func NewLogger() CustomLogger {
+	level := os.Getenv("LOG_LEVEL") // debug, info, warn, error, fatal, panic
+
+	switch strings.ToLower(level) {
+	case "debug":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	case "fatal":
+		zerolog.SetGlobalLevel(zerolog.FatalLevel)
+	case "panic":
+		zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel) // default level
+	}
+
+	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack
+	// create output configuration
+	output := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339, NoColor: false}
+
+	// Format level: fatal, error, debug, info, warn
+	output.FormatLevel = func(i interface{}) string {
+		i = strings.ToUpper(i.(string))
+		switch i {
+		case "INFO":
+			return color.Green(fmt.Sprintf("| %-6s|", i))
+		case "WARN":
+			return color.Yellow(fmt.Sprintf("| %-6s|", i))
+		case "ERROR":
+			return color.Red(fmt.Sprintf("| %-6s|", i))
+		case "DEBUG":
+			return color.Blue(fmt.Sprintf("| %-6s|", i))
+		case "FATAL":
+			return color.Magenta(fmt.Sprintf("| %-6s|", i))
+		default:
+			return fmt.Sprintf("| %-6s|", i)
+		}
+	}
+	output.FormatFieldName = func(i interface{}) string {
+		return fmt.Sprintf("%s:", i)
+	}
+	output.FormatFieldValue = func(i interface{}) string {
+		return fmt.Sprintf("%s", i)
+	}
+
+	// format error
+	output.FormatErrFieldName = func(i interface{}) string {
+		return fmt.Sprintf("%s: ", i)
+	}
+	zerologLogger := zerolog.New(output).With().Caller().Timestamp().Logger()
+
+	// Create a new GELF writer instance
+	gelfWriter, err := gelf.NewWriter(os.Getenv("GRAYLOG_ADDRESS"))
+	if err != nil {
+		fmt.Printf("Failed to create GELF writer: %v", err)
+	} else {
+		fmt.Println("Successfully connected to Graylog")
+	}
+
+	Logger = CustomLogger{zerologLogger, gelfWriter}
+	return Logger
+}
+
+func (l *CustomLogger) Close() {
+	if l.file != nil {
+		l.LogDebug().Msg("Closing log file")
+		if err := l.file.Close(); err != nil {
+			l.LogError().Msg(err.Error())
+		}
+	}
+}
+
+func (l *CustomLogger) LogInfo() *ZerologEventWrapper {
+	if l.logToFileFlag {
+		return &ZerologEventWrapper{l.logToFile().Info(), zerolog.InfoLevel}
+	}
+
+	return &ZerologEventWrapper{l.Info(), zerolog.InfoLevel}
+}
+
+func (l *CustomLogger) LogError() *ZerologEventWrapper {
+	if l.logToFileFlag {
+		return &ZerologEventWrapper{l.logToFile().Error(), zerolog.ErrorLevel}
+	}
+
+	return &ZerologEventWrapper{l.Error(), zerolog.ErrorLevel}
+}
+
+func (l *CustomLogger) LogDebug() *ZerologEventWrapper {
+	if l.logToFileFlag {
+		return &ZerologEventWrapper{l.logToFile().Debug(), zerolog.DebugLevel}
+	}
+
+	return &ZerologEventWrapper{l.Debug(), zerolog.DebugLevel}
+}
+
+func (l *CustomLogger) LogWarn() *ZerologEventWrapper {
+	if l.logToFileFlag {
+		return &ZerologEventWrapper{l.logToFile().Warn(), zerolog.WarnLevel}
+	}
+
+	return &ZerologEventWrapper{l.Warn(), zerolog.WarnLevel}
+}
+
+func (l *CustomLogger) LogFatal() *ZerologEventWrapper {
+	if l.logToFileFlag {
+		return &ZerologEventWrapper{l.logToFile().Fatal(), zerolog.FatalLevel}
+	}
+
+	return &ZerologEventWrapper{l.Fatal(), zerolog.FatalLevel}
+}
+
+// Msg finalizes the log event and sends the message to both zerolog and Graylog.
+//
+// It performs the following:
+//
+// 1. If a GELF writer is configured, it sends a structured log to Graylog using the current log level.
+//
+// 2. If GELF forwarding fails, it logs the error using the base logger (to avoid recursive Msg calls).
+//
+// 3. Finally, it sends the log message to the original zerolog output (file or stdout).
+func (e *ZerologEventWrapper) Msg(msg string) {
+
+	if e.Event == nil {
+		return // 🛡 safe exit — log level disabled
+	}
+
+	if Logger.GelfWriter != nil {
+		err := Logger.GelfWriter.WriteMessage(&gelf.Message{
+			Short: msg,
+			Host:  "host",
+			Level: gelfLogLevelsMap[e.Level],
+			Extra: map[string]interface{}{
+				"method": "MANUAL LOG",
+			},
+		})
+		if err != nil {
+			Logger.Error().Msg(err.Error())
+		}
+	}
+
+	e.Event.Msg(msg)
+}
+
+
