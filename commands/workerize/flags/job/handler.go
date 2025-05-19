@@ -132,6 +132,7 @@ func GenerateCustomJob() {
 
 					if selectedOption == "Overwrite" {
 						customJobData.WorkerPoolOverwrite = true
+						break
 					} else {
 						for {
 							if err := survey.AskOne(&survey.Input{
@@ -151,7 +152,9 @@ func GenerateCustomJob() {
 							customJobData.WorkerPoolNameCamelCase = utils.SnakeToCamel(customJobData.WorkerPoolNameSnakeCase)
 							customJobData.WorkerPoolFileName = customJobData.WorkerPoolNameSnakeCase + "_worker_pool.go"
 							customJobData.WorkerName = customJobData.JobNamePascalCase + "Worker"
+							break
 						}
+						break
 					}
 				} else {
 					customJobData.WorkerPoolExists = workerPoolFileExists
