@@ -23,6 +23,7 @@ type Job struct {
 	Metadata    json.RawMessage `json:"metadata"`              // placeholder for extracted metadata from redis or for metadata that has to be saved to redis
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	NextAttemptAt   *time.Time
 }
 
 func (Job) TableName() string {

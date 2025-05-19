@@ -6,8 +6,10 @@ import (
 	"github.com/spf13/cobra"
 	"goblin/cli_config"
 	"goblin/utils"
+	"goblin/utils/service_utils"
 	"goblin/utils/workerize_utils"
 	"path"
+	"strconv"
 )
 
 var JobCmd = &cobra.Command{
@@ -104,67 +106,122 @@ func GenerateCustomJob() {
 		customJobData.WorkerPoolFileName = customJobData.JobNameSnakeCase + "_worker_pool.go"
 
 		implementWorkerPoolPrompt := &survey.Confirm{
-			Message: fmt.Sprintf("Do you want to implement a worker pool (%s) for %s ?", customJobData.WorkerPoolFileName, customJobData.JobNamePascalCase),
+			Message: fmt.Sprintf("Do you want to implement a worker pool (%s) for %s ?", customJobData.WorkerPoolFileName, customJobData.JobNamePascalCase+"Job"),
 			Default: false,
 		}
 		if err := survey.AskOne(implementWorkerPoolPrompt, &customJobData.CreateWorkerPool); err != nil {
 			utils.HandleError(err)
 		}
 
-		if customJobData.CreateWorkerPool {
+		break
 
-			customJobData.WorkerPoolNamePascalCase = customJobData.JobNamePascalCase + "WorkerPool"
-			customJobData.WorkerPoolNameSnakeCase = customJobData.JobNameSnakeCase + "_worker_pool"
+	}
 
-			for {
-				workerPoolFileExists := utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, customJobData.WorkerPoolFileName))
-				if workerPoolFileExists {
+	if customJobData.CreateWorkerPool {
 
-					options := []string{"Overwrite", fmt.Sprintf("Rename %v", customJobData.WorkerPoolFileName)}
-					var selectedOption string
-					workerPoolOverwriteStrategyPrompt := &survey.MultiSelect{
-						Message: fmt.Sprintf("Worker pool file %s already exists, please specify if you want to rename your custom worker pool or to overwrite existing one", customJobData.WorkerPoolFileName),
-						Options: options,
-					}
-					if err := survey.AskOne(workerPoolOverwriteStrategyPrompt, &selectedOption); err != nil {
-						utils.HandleError(err)
-					}
+		customJobData.WorkerPoolNameSnakeCase = customJobData.JobNameSnakeCase + "_worker_pool"
+		customJobData.WorkerPoolNamePascalCase = utils.SnakeToPascal(customJobData.WorkerPoolNameSnakeCase)
+		customJobData.WorkerPoolNameCamelCase = utils.SnakeToCamel(customJobData.WorkerPoolNameSnakeCase)
+		customJobData.WorkerPoolFileName = customJobData.WorkerPoolNameSnakeCase + "_worker_pool.go"
+		customJobData.WorkerName = customJobData.JobNamePascalCase + "Worker"
 
-					if selectedOption == "Overwrite" {
-						customJobData.WorkerPoolOverwrite = true
-						break
-					} else {
-						for {
-							if err := survey.AskOne(&survey.Input{
-								Message: "Please type in custom worker pool name (snake_case), keep in mind that it will get a suffix _worker_pool.go automatically:",
-								Default: customJobData.WorkerPoolNameSnakeCase,
-							}, &customJobData.WorkerPoolNameSnakeCase); err != nil {
-								utils.HandleError(err)
-							}
+		for {
+			workerPoolFileExists := utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, customJobData.WorkerPoolFileName))
+			if workerPoolFileExists {
 
-							if !utils.IsSnakeCase(customJobData.WorkerPoolNameSnakeCase) {
-								fmt.Printf("🛑 %s is not in snake case\n", customJobData.WorkerPoolNameSnakeCase)
-								continue
-							}
+				options := []string{"Overwrite", fmt.Sprintf("Rename %v", customJobData.WorkerPoolFileName)}
+				var selectedOption string
+				workerPoolOverwriteStrategyPrompt := &survey.MultiSelect{
+					Message: fmt.Sprintf("Worker pool file %s already exists, please specify if you want to rename your custom worker pool or to overwrite existing one", customJobData.WorkerPoolFileName),
+					Options: options,
+				}
+				if err := survey.AskOne(workerPoolOverwriteStrategyPrompt, &selectedOption); err != nil {
+					utils.HandleError(err)
+				}
 
-							customJobData.WorkerPoolNameSnakeCase = customJobData.WorkerPoolNameSnakeCase + "_worker_pool"
-							customJobData.WorkerPoolNamePascalCase = utils.SnakeToPascal(customJobData.WorkerPoolNameSnakeCase)
-							customJobData.WorkerPoolNameCamelCase = utils.SnakeToCamel(customJobData.WorkerPoolNameSnakeCase)
-							customJobData.WorkerPoolFileName = customJobData.WorkerPoolNameSnakeCase + "_worker_pool.go"
-							customJobData.WorkerName = customJobData.JobNamePascalCase + "Worker"
-							break
-						}
-						break
-					}
+				if selectedOption == "Overwrite" {
+					customJobData.WorkerPoolOverwrite = true
+					break
 				} else {
-					customJobData.WorkerPoolExists = workerPoolFileExists
+					for {
+						if err := survey.AskOne(&survey.Input{
+							Message: "Please type in custom worker pool name (snake_case), keep in mind that it will get a suffix _worker_pool.go automatically:",
+							Default: customJobData.WorkerPoolNameSnakeCase,
+						}, &customJobData.WorkerPoolNameSnakeCase); err != nil {
+							utils.HandleError(err)
+						}
+
+						if !utils.IsSnakeCase(customJobData.WorkerPoolNameSnakeCase) {
+							fmt.Printf("🛑 %s is not in snake case\n", customJobData.WorkerPoolNameSnakeCase)
+							continue
+						}
+
+						customJobData.WorkerPoolNameSnakeCase = customJobData.WorkerPoolNameSnakeCase + "_worker_pool"
+						customJobData.WorkerPoolNamePascalCase = utils.SnakeToPascal(customJobData.WorkerPoolNameSnakeCase)
+						customJobData.WorkerPoolNameCamelCase = utils.SnakeToCamel(customJobData.WorkerPoolNameSnakeCase)
+						customJobData.WorkerPoolFileName = customJobData.WorkerPoolNameSnakeCase + "_worker_pool.go"
+						customJobData.WorkerName = customJobData.JobNamePascalCase + "Worker"
+						break
+					}
 					break
 				}
+			} else {
+				customJobData.WorkerPoolExists = workerPoolFileExists
+				break
 			}
-
 		}
 
-		break
+		var chosenWorkerPoolSize string
+		if err := survey.AskOne(&survey.Input{
+			Message: "Please type in worker pool size :",
+			Default: "10",
+		}, &chosenWorkerPoolSize); err != nil {
+			utils.HandleError(err)
+		}
+
+		chosenWorkerPoolSizeInt, err := strconv.Atoi(chosenWorkerPoolSize)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		customJobData.WorkerPoolSize = chosenWorkerPoolSizeInt
+
+		var chosenWorkerPoolNumberOfRetries string
+		if err = survey.AskOne(&survey.Input{
+			Message: "Please type in worker pool number of retries upon failure :",
+			Default: "3",
+		}, &chosenWorkerPoolNumberOfRetries); err != nil {
+			utils.HandleError(err)
+		}
+
+		chosenWorkerPoolNumberOfRetriesInt, err := strconv.Atoi(chosenWorkerPoolNumberOfRetries)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		customJobData.WorkerPoolNumberOfRetries = chosenWorkerPoolNumberOfRetriesInt
+
+		// list services
+		existingServices, err := service_utils.ListExistingServices()
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		existingServicesMap := make(map[string]*service_utils.ServiceData)
+		for _, service := range existingServices {
+			existingServicesMap[service.ServiceFullName] = &service
+		}
+
+		if len(existingServices) > 0 {
+
+			err = survey.AskOne(&survey.MultiSelect{
+				Message: "Select a services to use:",
+				Options: utils.Keys(existingServicesMap),
+			}, &customJobData.ServicesToImplement)
+			if err != nil {
+				utils.HandleError(err)
+			}
+		}
 	}
 
 	err := workerize_utils.GenerateCustomJobMetadataFile(customJobData)
@@ -182,7 +239,10 @@ func GenerateCustomJob() {
 	if customJobData.CreateWorkerPool {
 
 		if !customJobData.WorkerPoolExists || (customJobData.WorkerPoolExists && customJobData.WorkerPoolOverwrite) {
-			// kreiraj
+			err = workerize_utils.GenerateCustomWorkerPool(customJobData)
+			if err != nil {
+				utils.HandleError(err)
+			}
 		}
 	}
 

@@ -939,3 +939,75 @@ func buildProxyFuncDecl(method *ast.Field, serviceData *ServiceData) (*ast.FuncD
 		},
 	}, nil
 }
+
+// ListExistingRepos scans the repositories folder and identifies existing repositories
+// by locating types with a WithTx method signature. It returns metadata about each found repository.
+func ListExistingServices() ([]ServiceData, error) {
+	var services []ServiceData
+
+	err := filepath.WalkDir(cli_config.CliConfig.ServicesFolderPath, func(servicePath string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !strings.HasSuffix(servicePath, ".go") {
+			return nil // skip non-Go files
+		}
+
+		fileSet := token.NewFileSet()
+		node, err := parser.ParseFile(fileSet, servicePath, nil, parser.ParseComments)
+		if err != nil {
+			return err
+		}
+
+		for _, decl := range node.Decls {
+			funcDecl, ok := decl.(*ast.FuncDecl)
+			if !ok || funcDecl.Name == nil {
+				continue
+			}
+
+			// Looking for function name starting with "New" and ending with "Service"
+			if !strings.HasPrefix(funcDecl.Name.Name, "New") || !strings.HasSuffix(funcDecl.Name.Name, "Service") {
+				continue
+			}
+
+			if funcDecl.Name.Name == "NewCentralService" {
+				continue
+			}
+
+			// Check if return type is a pointer to struct ending with "Service"
+			if funcDecl.Type.Results == nil || len(funcDecl.Type.Results.List) != 1 {
+				continue
+			}
+
+			starExpr, ok := funcDecl.Type.Results.List[0].Type.(*ast.StarExpr)
+			if !ok {
+				continue
+			}
+
+			ident, ok := starExpr.X.(*ast.Ident)
+			if !ok || !strings.HasSuffix(ident.Name, "Service") {
+				continue
+			}
+
+			serviceEntity := strings.TrimSuffix(ident.Name, "Service")
+
+			// Found a matching servicesitory!
+			services = append(services, ServiceData{
+				ServiceEntity:        serviceEntity,
+				ServiceFullName:      ident.Name,
+				ServiceFilePath:      servicePath,
+				ServiceFileName:      strings.Split(servicePath, "/")[len(strings.Split(servicePath, "/"))-1],
+				ServiceNameSnakeCase: utils.PascalToSnake(serviceEntity),
+			})
+		}
+
+		return nil
+	})
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+
+	return services, nil
+}

@@ -2,9 +2,9 @@ package {{.WorkersPackage}}
 
 import (
 	"context"
-	{{.JobsPackageImport}}
-	{{.ServicePackageImport}}
-	{{.LoggerPackageImport}}
+	"{{.JobsPackageImport}}"
+	"{{.ServicePackageImport}}"
+	"{{.LoggerPackageImport}}"
 	"time"
 )
 
@@ -15,24 +15,24 @@ type {{.WorkerPoolName}} struct {
 }
 
 type {{.WorkerName}} struct {
-	{{.WorkerImplementations}}
+	{{.ServicesToImplement | GenerateWorkerStructFields}}
 }
 
 func New{{.WorkerPoolName}}(poolSize int, maxRetries int, centralService *{{.ServicePackage}}.CentralService) *{{.WorkerPoolName}} {
 	return &{{.WorkerPoolName}}{
-		poolSize:       {{.WorkerPoolSize}},
-		maxRetries:     {{.NumberOfRetries}},
+		poolSize:       poolSize,
+		maxRetries:     maxRetries,
 		{{.WorkerName}}: New{{.WorkerName}}(centralService),
 	}
 }
 
 func New{{.WorkerName}}(centralService *{{.ServicePackage}}.CentralService) *{{.WorkerName}} {
 	return &{{.WorkerName}}{
-		{{.Implementations}}
+		{{.ServicesToImplement | GenerateImplementations}}
 	}
 }
 
-func (worker *S3UploadWorkerPool) Start(ctx context.Context, jobChan chan *jobs.Job, resultChan chan *jobs.JobResult) {
+func (worker *{{.WorkerPoolName}}) Start(ctx context.Context, jobChan chan *jobs.Job, resultChan chan *jobs.JobResult) {
 	for i := 0; i < worker.poolSize; i++ {
 		go func(workerID int) {
 			for {
@@ -45,7 +45,7 @@ func (worker *S3UploadWorkerPool) Start(ctx context.Context, jobChan chan *jobs.
 							delay := time.Until(*job.NextAttemptAt)
 							{{.LoggerPackage}}.Logger.Debug().Msgf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay)
 							time.AfterFunc(delay, func() {
-								resultChan <- worker.S3UploadWorker.HandleJob(ctx, job)
+								resultChan <- worker.{{.WorkerName}}.HandleJob(ctx, job)
 							})
 
 							continue

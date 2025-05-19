@@ -52,6 +52,7 @@ type CustomJobData struct {
 	WorkerPoolSize            int
 	WorkerPoolNumberOfRetries int
 	WorkerName                string
+	ServicesToImplement       []string
 }
 
 func InitBoilerplateWorkerizeData() *WorkerizeData {
@@ -553,4 +554,93 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 	}
 
 	return err
+}
+
+func GenerateCustomWorkerPool(customJobData *CustomJobData) error {
+	funcMap := template.FuncMap{
+		"GenerateWorkerStructFields": GenerateWorkerStructFields,
+		"GenerateImplementations":    GenerateImplementations,
+	}
+
+	tmpl, err := template.New(CustomWorkerPoolTemplateName).Funcs(funcMap).ParseFiles(CustomWorkerPoolTemplateFilePath)
+	if err != nil {
+		return err
+	}
+
+	customWorkerPoolPath := path.Join(cli_config.CliConfig.WorkersFolderPath, customJobData.WorkerPoolFileName)
+
+	f, err := os.Create(customWorkerPoolPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
+			if err != nil {
+				return err
+			}
+			f, err = os.Create(customWorkerPoolPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	defer f.Close()
+
+	templateData := struct {
+		WorkersPackage        string
+		JobsPackageImport     string
+		ServicePackageImport  string
+		ServicePackage        string
+		LoggerPackageImport   string
+		LoggerPackage         string
+		WorkerPoolName        string
+		WorkerName            string
+		WorkerPoolSize        int
+		NumberOfRetries       int
+		CustomJobMetadataName string
+		ServicesToImplement   []string
+	}{
+		WorkersPackage:        strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
+		JobsPackageImport:     path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.JobsFolderPath),
+		ServicePackageImport:  path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ServicesFolderPath),
+		ServicePackage:        strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1],
+		LoggerPackageImport:   path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.LoggerFolderPath),
+		LoggerPackage:         strings.Split(cli_config.CliConfig.LoggerFolderPath, "/")[len(strings.Split(cli_config.CliConfig.LoggerFolderPath, "/"))-1],
+		WorkerPoolName:        customJobData.WorkerPoolNamePascalCase,
+		WorkerName:            customJobData.WorkerName,
+		WorkerPoolSize:        customJobData.WorkerPoolSize,
+		NumberOfRetries:       customJobData.WorkerPoolNumberOfRetries,
+		CustomJobMetadataName: customJobData.JobMetadataName,
+		ServicesToImplement:   customJobData.ServicesToImplement,
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(fmt.Sprintf("✅ %s generated successfully.", customJobData.WorkerPoolFileName))
+	return nil
+}
+
+func GenerateImplementations(services []string) string {
+	if len(services) == 0 {
+		return ""
+	}
+
+	var builder strings.Builder
+	for _, service := range services {
+		fmt.Fprintf(&builder, "%s: centralService.%s,\n", utils.PascalToCamel(service), service)
+	}
+	return builder.String()
+}
+
+func GenerateWorkerStructFields(services []string) string {
+	if len(services) == 0 {
+		return ""
+	}
+
+	var builder strings.Builder
+	for _, service := range services {
+		fmt.Fprintf(&builder, "%s %sInterface\n", utils.PascalToCamel(service), service)
+	}
+	return builder.String()
 }
