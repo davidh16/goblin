@@ -672,7 +672,7 @@ func GenerateWorkerStructFields(services []string) string {
 
 	var builder strings.Builder
 	for _, service := range services {
-		fmt.Fprintf(&builder, "%s %sInterface\n", utils.PascalToCamel(service), service)
+		fmt.Fprintf(&builder, "%s %s.%sInterface\n", utils.PascalToCamel(service), strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1], service)
 	}
 	return builder.String()
 }
