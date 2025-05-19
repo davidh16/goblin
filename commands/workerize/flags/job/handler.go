@@ -10,6 +10,7 @@ import (
 	"goblin/utils/workerize_utils"
 	"path"
 	"strconv"
+	"strings"
 )
 
 var JobCmd = &cobra.Command{
@@ -131,7 +132,7 @@ func GenerateCustomJob() {
 
 				options := []string{"Overwrite", fmt.Sprintf("Rename %v", customJobData.WorkerPoolFileName)}
 				var selectedOption string
-				workerPoolOverwriteStrategyPrompt := &survey.MultiSelect{
+				workerPoolOverwriteStrategyPrompt := &survey.Select{
 					Message: fmt.Sprintf("Worker pool file %s already exists, please specify if you want to rename your custom worker pool or to overwrite existing one", customJobData.WorkerPoolFileName),
 					Options: options,
 				}
@@ -160,7 +161,7 @@ func GenerateCustomJob() {
 						customJobData.WorkerPoolNamePascalCase = utils.SnakeToPascal(customJobData.WorkerPoolNameSnakeCase)
 						customJobData.WorkerPoolNameCamelCase = utils.SnakeToCamel(customJobData.WorkerPoolNameSnakeCase)
 						customJobData.WorkerPoolFileName = customJobData.WorkerPoolNameSnakeCase + "_worker_pool.go"
-						customJobData.WorkerName = customJobData.JobNamePascalCase + "Worker"
+						customJobData.WorkerName = strings.TrimSuffix(customJobData.WorkerPoolNamePascalCase, "Pool")
 						break
 					}
 					break

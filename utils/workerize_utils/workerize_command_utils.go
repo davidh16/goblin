@@ -467,12 +467,10 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 		return err
 	}
 
-	// Step 1: Add new JobType constant
-	newConst := &ast.ValueSpec{
-		Names: []*ast.Ident{ast.NewIdent(customJobData.JobTypeName)},
-	}
+	// Track if const already exists
+	jobTypeExists := false
 
-	// Find const declaration of JobType and append
+	// Step 1: Find const declaration of JobType and conditionally append
 	for _, decl := range node.Decls {
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok || genDecl.Tok != token.CONST {
@@ -480,12 +478,34 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 		}
 		for _, spec := range genDecl.Specs {
 			valSpec, ok := spec.(*ast.ValueSpec)
-			if ok && valSpec.Names[0].Name == "JobTypeUnspecified" {
-				genDecl.Specs = append(genDecl.Specs, newConst)
-				break
+			if !ok {
+				continue
+			}
+			for _, ident := range valSpec.Names {
+				if ident.Name == customJobData.JobTypeName {
+					jobTypeExists = true
+					break
+				}
+			}
+		}
+
+		if !jobTypeExists {
+			for _, spec := range genDecl.Specs {
+				valSpec, ok := spec.(*ast.ValueSpec)
+				if ok && valSpec.Names[0].Name == "JobTypeUnspecified" {
+					newConst := &ast.ValueSpec{
+						Names: []*ast.Ident{ast.NewIdent(customJobData.JobTypeName)},
+					}
+					genDecl.Specs = append(genDecl.Specs, newConst)
+					break
+				}
 			}
 		}
 	}
+
+	// Track seen keys to avoid duplicate additions
+	jobTypesMapSeen := map[string]bool{}
+	jobTypeMetadataMapSeen := map[string]bool{}
 
 	// Step 2: Update jobTypesMap and jobTypeMetadataMap
 	ast.Inspect(node, func(n ast.Node) bool {
@@ -516,39 +536,56 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 				continue
 			}
 
+			// Track existing keys
+			for _, elt := range cl.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				keyIdent, ok := kv.Key.(*ast.Ident)
+				if !ok {
+					continue
+				}
+				if name == "jobTypesMap" {
+					jobTypesMapSeen[keyIdent.Name] = true
+				} else if name == "jobTypeMetadataMap" {
+					jobTypeMetadataMapSeen[keyIdent.Name] = true
+				}
+			}
+
 			switch name {
 			case "jobTypesMap":
-				cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
-					Key:   ast.NewIdent(customJobData.JobTypeName),
-					Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
-				})
+				if !jobTypesMapSeen[customJobData.JobTypeName] {
+					cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+						Key:   ast.NewIdent(customJobData.JobTypeName),
+						Value: &ast.CompositeLit{Type: ast.NewIdent("struct{}")},
+					})
+				}
 			case "jobTypeMetadataMap":
-				cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
-					Key: ast.NewIdent(customJobData.JobTypeName),
-					Value: &ast.CallExpr{
-						Fun: ast.NewIdent("reflect.TypeOf"),
-						Args: []ast.Expr{&ast.CompositeLit{
-							Type: ast.NewIdent(customJobData.JobMetadataName),
-						}},
-					},
-				})
+				if !jobTypeMetadataMapSeen[customJobData.JobTypeName] {
+					cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+						Key: ast.NewIdent(customJobData.JobTypeName),
+						Value: &ast.CallExpr{
+							Fun: ast.NewIdent("reflect.TypeOf"),
+							Args: []ast.Expr{&ast.CompositeLit{
+								Type: ast.NewIdent(customJobData.JobMetadataName),
+							}},
+						},
+					})
+				}
 			}
 		}
 		return true
 	})
 
-	// Write back to file
+	// Step 3: Write changes back
 	file, err := os.Create(baseJobFilePath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	if err = printer.Fprint(file, fset, node); err != nil {
-		return err
-	}
-
-	return err
+	return printer.Fprint(file, fset, node)
 }
 
 func GenerateCustomWorkerPool(customJobData *CustomJobData) error {
