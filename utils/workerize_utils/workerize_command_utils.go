@@ -470,11 +470,6 @@ func AddCustomJobToBaseJob(customJobData *CustomJobData) error {
 	// Step 1: Add new JobType constant
 	newConst := &ast.ValueSpec{
 		Names: []*ast.Ident{ast.NewIdent(customJobData.JobTypeName)},
-		Values: []ast.Expr{&ast.BinaryExpr{
-			X:  ast.NewIdent("iota"),
-			Op: token.ADD,
-			Y:  ast.NewIdent("1"), // Assumes appending to previous iota block
-		}},
 	}
 
 	// Find const declaration of JobType and append
