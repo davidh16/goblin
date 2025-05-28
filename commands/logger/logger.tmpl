@@ -99,52 +99,23 @@ func NewLogger() CustomLogger {
 	return Logger
 }
 
-func (l *CustomLogger) Close() {
-	if l.file != nil {
-		l.LogDebug().Msg("Closing log file")
-		if err := l.file.Close(); err != nil {
-			l.LogError().Msg(err.Error())
-		}
-	}
-}
-
 func (l *CustomLogger) LogInfo() *ZerologEventWrapper {
-	if l.logToFileFlag {
-		return &ZerologEventWrapper{l.logToFile().Info(), zerolog.InfoLevel}
-	}
-
 	return &ZerologEventWrapper{l.Info(), zerolog.InfoLevel}
 }
 
 func (l *CustomLogger) LogError() *ZerologEventWrapper {
-	if l.logToFileFlag {
-		return &ZerologEventWrapper{l.logToFile().Error(), zerolog.ErrorLevel}
-	}
-
 	return &ZerologEventWrapper{l.Error(), zerolog.ErrorLevel}
 }
 
 func (l *CustomLogger) LogDebug() *ZerologEventWrapper {
-	if l.logToFileFlag {
-		return &ZerologEventWrapper{l.logToFile().Debug(), zerolog.DebugLevel}
-	}
-
 	return &ZerologEventWrapper{l.Debug(), zerolog.DebugLevel}
 }
 
 func (l *CustomLogger) LogWarn() *ZerologEventWrapper {
-	if l.logToFileFlag {
-		return &ZerologEventWrapper{l.logToFile().Warn(), zerolog.WarnLevel}
-	}
-
 	return &ZerologEventWrapper{l.Warn(), zerolog.WarnLevel}
 }
 
 func (l *CustomLogger) LogFatal() *ZerologEventWrapper {
-	if l.logToFileFlag {
-		return &ZerologEventWrapper{l.logToFile().Fatal(), zerolog.FatalLevel}
-	}
-
 	return &ZerologEventWrapper{l.Fatal(), zerolog.FatalLevel}
 }
 
