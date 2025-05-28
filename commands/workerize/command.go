@@ -8,6 +8,7 @@ import (
 	"goblin/commands/workerize/flags/job"
 	"goblin/utils"
 	"goblin/utils/database_utils"
+	"goblin/utils/logger_utils"
 	"goblin/utils/workerize_utils"
 )
 
@@ -125,6 +126,26 @@ func WorkerizeCmdHandler() {
 			Default: false,
 		}
 		err = survey.AskOne(confirmOverwritePrompt, &data.OrchestratorOverwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if !data.LoggerExists {
+		implementLoggerPrompt := &survey.Confirm{
+			Message: "logger is not implemented, do you wish to implement it to enrich workers and jobs logic with useful logs ?",
+			Default: false,
+		}
+		err = survey.AskOne(implementLoggerPrompt, &data.LoggerImplemented)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	} else {
+		data.LoggerImplemented = true
+	}
+
+	if data.LoggerImplemented {
+		err = logger_utils.GenerateLogger()
 		if err != nil {
 			utils.HandleError(err)
 		}

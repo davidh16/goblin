@@ -30,6 +30,8 @@ type WorkerizeData struct {
 	WorkerPoolExists      bool
 	WorkerPoolOverwrite   bool
 	CentralServiceExists  bool
+	LoggerExists          bool
+	LoggerImplemented     bool
 }
 
 type CustomJobData struct {
@@ -53,6 +55,7 @@ type CustomJobData struct {
 	WorkerPoolNumberOfRetries int
 	WorkerName                string
 	ServicesToImplement       []string
+	LoggerImplemented         bool
 }
 
 func InitBoilerplateWorkerizeData() *WorkerizeData {
@@ -68,6 +71,7 @@ func InitBoilerplateWorkerizeData() *WorkerizeData {
 	data.OrchestratorExists = utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, "orchestrator.go"))
 	data.WorkerPoolExists = utils.FileExists(path.Join(cli_config.CliConfig.WorkersFolderPath, "worker_pool.go"))
 	data.CentralServiceExists = utils.FileExists(path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go"))
+	data.LoggerExists = utils.FileExists(path.Join(cli_config.CliConfig.LoggerFolderPath, "logger.go"))
 	return data
 }
 
@@ -142,9 +146,11 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		defer f.Close()
 
 		templateData := struct {
-			JobsPackage string
+			JobsPackage       string
+			LoggerImplemented bool
 		}{
-			JobsPackage: strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+			JobsPackage:       strings.Split(cli_config.CliConfig.JobsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.JobsFolderPath, "/"))-1],
+			LoggerImplemented: data.LoggerImplemented,
 		}
 
 		err = tmpl.Execute(f, templateData)
@@ -222,11 +228,13 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 		defer f.Close()
 
 		templateData := struct {
-			WorkersPackage string
-			JobsPackage    string
+			WorkersPackage    string
+			JobsPackage       string
+			LoggerImplemented bool
 		}{
-			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
-			JobsPackage:    cli_config.CliConfig.JobsFolderPath,
+			WorkersPackage:    strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
+			JobsPackage:       cli_config.CliConfig.JobsFolderPath,
+			LoggerImplemented: data.LoggerImplemented,
 		}
 
 		err = tmpl.Execute(f, templateData)
@@ -261,13 +269,17 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 		defer f.Close()
 
 		templateData := struct {
-			WorkersPackage string
-			JobsPackage    string
-			LoggerPackage  string
+			WorkersPackage    string
+			JobsImport        string
+			LoggerImport      string
+			LoggerPackage     string
+			LoggerImplemented bool
 		}{
-			WorkersPackage: strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
-			JobsPackage:    cli_config.CliConfig.JobsFolderPath,
-			LoggerPackage:  cli_config.CliConfig.LoggerFolderPath,
+			WorkersPackage:    strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
+			JobsImport:        cli_config.CliConfig.JobsFolderPath,
+			LoggerImport:      cli_config.CliConfig.LoggerFolderPath,
+			LoggerPackage:     strings.Split(cli_config.CliConfig.LoggerFolderPath, "/")[len(strings.Split(cli_config.CliConfig.LoggerFolderPath, "/"))-1],
+			LoggerImplemented: data.LoggerImplemented,
 		}
 
 		err = tmpl.Execute(f, templateData)
@@ -629,6 +641,7 @@ func GenerateCustomWorkerPool(customJobData *CustomJobData) error {
 		NumberOfRetries       int
 		CustomJobMetadataName string
 		ServicesToImplement   []string
+		LoggerImplemented     bool
 	}{
 		WorkersPackage:        strings.Split(cli_config.CliConfig.WorkersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.WorkersFolderPath, "/"))-1],
 		JobsPackageImport:     path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.JobsFolderPath),
@@ -642,6 +655,7 @@ func GenerateCustomWorkerPool(customJobData *CustomJobData) error {
 		NumberOfRetries:       customJobData.WorkerPoolNumberOfRetries,
 		CustomJobMetadataName: customJobData.JobMetadataName,
 		ServicesToImplement:   customJobData.ServicesToImplement,
+		LoggerImplemented:     customJobData.LoggerImplemented,
 	}
 
 	err = tmpl.Execute(f, templateData)

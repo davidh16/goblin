@@ -3,8 +3,8 @@ package {{.WorkersPackage}}
 import (
 	"context"
 	"fmt"
-	"goblin/{{.JobsPackage}}"
-	"goblin/{{.LoggerPackage}}"
+	"goblin/{{.JobsImport}}"
+	"goblin/{{.LoggerImport}}"
 	"goblin/test/services"
 	"math/rand"
 	"time"
@@ -41,17 +41,16 @@ func (o *OrchestratorWorker) Start(ctx context.Context) {
 
 			processedJob, err := o.jobsManager.FetchAndProcessJob(ctx)
 			if err != nil {
-				logger.Logger.LogError().Msgf("failed to process job: %s", err.Error())
+			    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogError().Msgf("failed to process job: %s", err.Error()) {{ else }} fmt.Println("failed to process job: ", err.Error()) {{ end }}
 				continue
 			}
 
 			switch processedJob.JobType {
 			default:
-				logger.Logger.LogError().Msg(fmt.Sprintf("Unknown job type: %d", processedJob.JobType))
+			    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogError().Msg(fmt.Sprintf("Unknown job type: %d", processedJob.JobType)) {{ else }} fmt.Println(fmt.Sprintf("Unknown job type: %d", processedJob.JobType)) {{ end }}
 				continue
 			}
 		}
-
 	}
 }
 
@@ -65,20 +64,20 @@ func (o *OrchestratorWorker) handleResult(ctx context.Context, result *jobs.JobR
 			result.Job.Status = jobs.JobStatusFailed
 
 			if saveErr := o.jobsManager.SaveFailedJob(result.Job); saveErr != nil {
-				logger.Logger.LogError().Msg(saveErr.Error())
+                {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogError().Msg(saveErr.Error()) {{ else }} fmt.Println("Failed to save failed job: ", saveErr.Error()) {{ end }}
 			}
-			logger.Logger.LogError().Msgf("Job %s failed after retries", result.Job.Uuid)
+			{{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogError().Msgf("Job %s failed after retries", result.Job.Uuid) {{ else }} fmt.Println("Job %s failed after retries", result.Job.Uuid) {{ end }}
 		} else {
 			// exponential backoff with jitter
 			delay := baseRetryDelay * (1 << result.Job.RetryCount)
 			jitter := rand.Intn(int(delay / 2))
 			time.Sleep(delay + time.Duration(jitter))
 
-			logger.Logger.Debug().Msgf("Retrying job %s (attempt %d)", result.Job.Uuid, result.Job.RetryCount)
+			{{.LoggerPackage}}.Logger.Debug().Msgf("Retrying job %s (attempt %d)", result.Job.Uuid, result.Job.RetryCount)
 			go func(job *jobs.Job) {
 				err := o.jobsManager.RequeueJob(ctx, job)
 				if err != nil {
-					logger.Logger.LogError().Msgf("failed to requeue job %s", result.Job.Uuid)
+					{{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogError().Msgf("failed to requeue job %s", result.Job.Uuid) {{ else }} fmt.Println("failed to requeue job: ", result.Job.Uuid) {{ end }}
 				}
 			}(result.Job)
 		}

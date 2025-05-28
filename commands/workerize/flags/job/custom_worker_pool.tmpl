@@ -43,7 +43,8 @@ func (worker *{{.WorkerPoolName}}) Start(ctx context.Context, jobChan chan *jobs
 					if job.NextAttemptAt != nil {
 						if time.Now().Before(*job.NextAttemptAt) {
 							delay := time.Until(*job.NextAttemptAt)
-							{{.LoggerPackage}}.Logger.Debug().Msgf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay)
+							{{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.Debug().Msgf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay) {{ else }} fmt.Println(fmt.Sprintf("⏳ Job %s not ready yet, delaying %s", job.Uuid, delay) {{ end }}
+
 							time.AfterFunc(delay, func() {
 								resultChan <- worker.{{.WorkerName}}.HandleJob(ctx, job)
 							})
@@ -61,7 +62,7 @@ func (worker *{{.WorkerPoolName}}) Start(ctx context.Context, jobChan chan *jobs
 
 func (w *{{.WorkerName}}) HandleJob(ctx context.Context, job *jobs.Job) *jobs.JobResult {
 
-	{{.LoggerPackage}}.Logger.LogDebug().Msgf("Handling job: %v", job.Uuid)
+	{{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogDebug().Msgf("Handling job: %v", job.Uuid) {{ else }} fmt.Println(fmt.Sprintf("Handling job: %v", job.Uuid) {{ end }}
 
 	_, err := jobs.ParseMetadata[jobs.{{.CustomJobMetadataName}}](job.Metadata)
 	if err != nil {
@@ -70,7 +71,6 @@ func (w *{{.WorkerName}}) HandleJob(ctx context.Context, job *jobs.Job) *jobs.Jo
 			Job: job,
 		}
 	}
-
 
 	return &jobs.JobResult{
 		Job: job,
