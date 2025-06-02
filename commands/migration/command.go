@@ -1,14 +1,12 @@
 package migration
 
 import (
-	"errors"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"goblin/cli_config"
 	"goblin/utils"
 	"goblin/utils/migration_utils"
-	"os"
 	"path"
 	"time"
 )
@@ -60,25 +58,10 @@ func migrationCmdHandler() {
 	migrationData.MigrationUpFileFullPath = path.Join(cli_config.CliConfig.MigrationsFolderPath, migrationData.MigrationUpFileName)
 	migrationData.MigrationDownFileFullPath = path.Join(cli_config.CliConfig.MigrationsFolderPath, migrationData.MigrationDownFileName)
 
-	f, err := os.Create(migrationData.MigrationUpFileFullPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.MigrationsFolderPath, 0755) // 0755 = rwxr-xr-x
-			if err != nil {
-				utils.HandleError(err)
-			}
-			f, err = os.Create(migrationData.MigrationUpFileFullPath)
-			if err != nil {
-				utils.HandleError(err)
-			}
-		}
-	}
-
-	f, err = os.Create(migrationData.MigrationDownFileFullPath)
+	err := migration_utils.GenerateMigrationFiles(migrationData)
 	if err != nil {
 		utils.HandleError(err)
 	}
-	defer f.Close()
 
 	fmt.Println(fmt.Sprintf("✅ %s migration generated successfully.", migrationData.MigrationUpFileName))
 	fmt.Println(fmt.Sprintf("✅ %s migration generated successfully.", migrationData.MigrationDownFileName))
