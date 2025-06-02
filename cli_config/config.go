@@ -21,6 +21,7 @@ type Config struct {
 	JobsFolderPath              string `yaml:"jobs_folder_path"`
 	LoggerFolderPath            string `yaml:"logger_folder_path"`
 	ProjectName                 string `yaml:"project_name"`
+	MigrationsFolderPath        string `yaml:"migrations_folder_path"` // path for folder where migration files are located
 }
 
 var CliConfig *Config

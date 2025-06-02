@@ -5,6 +5,7 @@ import (
 	"goblin/commands/controller"
 	"goblin/commands/database"
 	"goblin/commands/logger"
+	"goblin/commands/migration"
 	"goblin/commands/model"
 	"goblin/commands/repo"
 	"goblin/commands/service"
@@ -66,4 +67,6 @@ func init() {
 	workerize.WorkerizeCmd.Flags().BoolVarP(&workerize.CustomJobFlag, "job", "j", false, "Generate custom job")
 
 	rootCmd.AddCommand(logger.LoggerCmd)
+
+	rootCmd.AddCommand(migration.MigrationCmd)
 }
