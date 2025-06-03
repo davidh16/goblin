@@ -15,10 +15,11 @@ import (
 )
 
 type ModelData struct {
-	NameSnakeCase string
-	ModelFileName string
-	ModelFilePath string
-	ModelEntity   string
+	NameSnakeCase   string
+	ModelFileName   string
+	ModelFilePath   string
+	ModelEntity     string
+	CreateMigration bool
 }
 
 type MigrationColumn struct {
@@ -99,6 +100,15 @@ func TriggerGetModelNameFlow() (*ModelData, error) {
 		}
 		break
 	}
+
+	confirmPrompt := &survey.Confirm{
+		Message: "Do you want to create a migration for your model ?",
+		Default: true,
+	}
+	if err := survey.AskOne(confirmPrompt, &modelData.CreateMigration); err != nil {
+		return nil, err
+	}
+
 	return modelData, nil
 }
 

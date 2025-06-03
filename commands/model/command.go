@@ -9,6 +9,7 @@ import (
 	"goblin/cli_config"
 	"goblin/commands/model/flags/user"
 	"goblin/utils"
+	"goblin/utils/migration_utils"
 	"goblin/utils/model_utils"
 	"os"
 	"path"
@@ -134,6 +135,25 @@ func ModelCmdHandler() {
 		utils.HandleError(err, "Error executing model template")
 	}
 
+	var createMigration bool
+	confirmPrompt := &survey.Confirm{
+		Message: "Do you want to create a migration for your model ?",
+		Default: true,
+	}
+	if err = survey.AskOne(confirmPrompt, &createMigration); err != nil {
+		utils.HandleError(err)
+	}
+
+	if createMigration {
+
+		migrationData := migration_utils.GenerateMigrationDataFromName(inflection.Plural(modelData.NameSnakeCase))
+
+		err = migration_utils.GenerateMigrationFiles(migrationData)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
 	fmt.Println(fmt.Sprintf("✅ %s model generated.", modelData.ModelEntity))
 }
 
@@ -178,6 +198,15 @@ func CreateModel(modelData *model_utils.ModelData) error {
 	err = tmpl.Execute(f, templateData)
 	if err != nil {
 		return err
+	}
+
+	if modelData.CreateMigration {
+		migrationData := migration_utils.GenerateMigrationDataFromName(inflection.Plural(modelData.NameSnakeCase))
+
+		err = migration_utils.GenerateMigrationFiles(migrationData)
+		if err != nil {
+			utils.HandleError(err)
+		}
 	}
 
 	fmt.Println(fmt.Sprintf("✅ %s model generated.", modelData.ModelEntity))

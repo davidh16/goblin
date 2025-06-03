@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"text/template"
+	"time"
 )
 
 type MigrationData struct {
@@ -18,6 +19,18 @@ type MigrationData struct {
 
 func NewMigrationData() *MigrationData {
 	return &MigrationData{}
+}
+
+func GenerateMigrationDataFromName(name string) *MigrationData {
+
+	migrationData := NewMigrationData()
+	migrationData.MigrationNameSnakeCase = name
+	migrationData.MigrationUpFileName = time.Now().Format("20060102150405") + "_" + name + "_up.sql"
+	migrationData.MigrationDownFileName = time.Now().Format("20060102150405") + "_" + name + "_down.sql"
+	migrationData.MigrationUpFileFullPath = path.Join(cli_config.CliConfig.MigrationsFolderPath, migrationData.MigrationUpFileName)
+	migrationData.MigrationDownFileFullPath = path.Join(cli_config.CliConfig.MigrationsFolderPath, migrationData.MigrationDownFileName)
+
+	return migrationData
 }
 
 func GenerateMigrationFiles(migrationData *MigrationData) error {
