@@ -1,0 +1,13 @@
+package {{.Package}}
+
+import (
+	{{ if .CentralServiceExists }}"{{GetProjectName}}/{{.ServicePackageImport}}"{{end}}
+)
+
+type CentralController struct {
+	// implementations
+}
+
+func NewCentralController({{ if .CentralServiceExists }}centralService *{{.ServicePackage}}.CentralService{{end}}) *CentralController {
+	return &CentralController{}
+}

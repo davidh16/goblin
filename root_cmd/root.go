@@ -61,7 +61,8 @@ func init() {
 	rootCmd.AddCommand(service.ServiceCmd)
 	service.ServiceCmd.Flags().BoolVarP(&service.CentralServiceFlag, "central-service", "c", false, "Generate central service")
 
-	rootCmd.AddCommand(controller.CentralControllerCmd)
+	rootCmd.AddCommand(controller.ControllerCmd)
+	controller.ControllerCmd.Flags().BoolVarP(&controller.CentralControllerFlag, "central-controller", "c", false, "Generate central controller")
 
 	rootCmd.AddCommand(workerize.WorkerizeCmd)
 	workerize.WorkerizeCmd.Flags().BoolVarP(&workerize.CustomJobFlag, "job", "j", false, "Generate custom job")
