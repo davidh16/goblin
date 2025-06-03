@@ -99,7 +99,7 @@ func ModelCmdHandler() {
 	}
 
 	// Write the model to file
-	tmpl, err := template.New(ModelTemplateName).Funcs(funcMap).ParseFiles(ModelTemplatePath)
+	tmpl, err := template.New(model_utils.ModelTemplateName).Funcs(funcMap).ParseFiles(model_utils.ModelTemplatePath)
 	if err != nil {
 		utils.HandleError(err, "Error parsing model template")
 	}
@@ -143,7 +143,7 @@ func CreateModel(modelData *model_utils.ModelData) error {
 	}
 
 	// Write the model to file
-	tmpl, err := template.New(ModelTemplateName).Funcs(funcMap).ParseFiles(ModelTemplatePath)
+	tmpl, err := template.New(model_utils.ModelTemplateName).Funcs(funcMap).ParseFiles(model_utils.ModelTemplatePath)
 	if err != nil {
 		return err
 	}

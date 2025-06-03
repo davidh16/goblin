@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2/terminal"
+	"github.com/google/uuid"
 	"os"
 	"reflect"
 	"regexp"
@@ -23,6 +24,7 @@ var (
 	Float32Type = reflect.TypeOf(float32(0))
 	BoolType    = reflect.TypeOf(false)
 	TimeType    = reflect.TypeOf(time.Time{})
+	UuidType    = reflect.TypeOf(uuid.UUID{})
 )
 
 // Keys converts a map into an array of keys

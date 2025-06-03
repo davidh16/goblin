@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"goblin/cli_config"
 	"goblin/utils"
+	"goblin/utils/model_utils"
 	"os"
 	"path"
 	"strings"
@@ -25,10 +26,10 @@ func GenerateUserModel() {
 
 	userModelPath := path.Join(cli_config.CliConfig.ModelsFolderPath, "user.go")
 
-	existingModelAttributes := detectExistingModelAttributes(userModelPath, utils.Keys(optionalUserModelAttributes))
+	existingModelAttributes := detectExistingModelAttributes(userModelPath, utils.Keys(model_utils.OptionalUserModelAttributes))
 	prompt := &survey.MultiSelect{
 		Message: "Select fields to include in the User model:",
-		Options: utils.Keys(optionalUserModelAttributes),
+		Options: utils.Keys(model_utils.OptionalUserModelAttributes),
 		Default: existingModelAttributes,
 	}
 
@@ -39,13 +40,13 @@ func GenerateUserModel() {
 		return
 	}
 
-	var optionalAttributes []UserModelAttribute
+	var optionalAttributes []model_utils.UserModelAttribute
 	for _, attribute := range selectedOptionalAttributes {
-		optionalAttributes = append(optionalAttributes, NewUserModelAttribute(attribute))
+		optionalAttributes = append(optionalAttributes, model_utils.NewUserModelAttribute(attribute))
 	}
 
 	// Write the model to file
-	tmpl, err := template.ParseFiles(UserModelTemplatePath)
+	tmpl, err := template.ParseFiles(model_utils.UserModelTemplatePath)
 	if err != nil {
 		panic(err)
 	}
@@ -70,6 +71,26 @@ func GenerateUserModel() {
 	if err != nil {
 		fmt.Println("Template exec error:", err)
 		return
+	}
+
+	var createMigration bool
+	confirmPrompt := &survey.Confirm{
+		Message: "Do you want to create a migration for your model ?",
+		Default: true,
+	}
+	if err = survey.AskOne(confirmPrompt, &createMigration); err != nil {
+		utils.HandleError(err)
+	}
+
+	if createMigration {
+
+		userAttributes := model_utils.NonOptionalUserModelAttributeKeys
+		userAttributes = append(userAttributes, selectedOptionalAttributes...)
+
+		err = model_utils.CreateMigrationForUserModel(userAttributes)
+		if err != nil {
+			utils.HandleError(err)
+		}
 	}
 
 	fmt.Println("✅ User model generated with selected fields.")

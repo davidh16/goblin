@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 	"goblin/cli_config"
+	central_repo "goblin/commands/repo/flags/central-repo"
 	"goblin/utils"
 	"goblin/utils/service_utils"
 	"os"
@@ -49,8 +50,23 @@ func GenerateCentralService() {
 				return
 			}
 		}
+	}
 
-		return
+	centralRepoExists := utils.FileExists(path.Join(cli_config.CliConfig.RepositoriesFolderPath, "central_repo.go"))
+	if !centralRepoExists {
+		var confirm bool
+		confirmPrompt := &survey.Confirm{
+			Message: "Do you wish to inject a central repo in your service ?",
+			Default: true,
+		}
+		if err := survey.AskOne(confirmPrompt, &confirm); err != nil {
+			utils.HandleError(err)
+		}
+
+		if confirm {
+			central_repo.GenerateCentralRepo()
+			centralRepoExists = true
+		}
 	}
 
 	funcMap := template.FuncMap{
@@ -79,17 +95,30 @@ func GenerateCentralService() {
 	defer f.Close()
 
 	templateData := struct {
-		RepoPackage    string
-		ServicePackage string
+		CentralRepoExists bool
+		RepoPackage       string
+		RepoPackageImport string
+		ServicePackage    string
 	}{
-		RepoPackage:    strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/"))-1],
-		ServicePackage: strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1],
+		RepoPackage:       strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/"))-1],
+		RepoPackageImport: cli_config.CliConfig.RepositoriesFolderPath,
+		ServicePackage:    strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1],
+		CentralRepoExists: centralRepoExists,
 	}
 
 	err = tmpl.Execute(f, templateData)
 	if err != nil {
 		fmt.Println("Template exec error:", err)
 		return
+	}
+
+	if !alreadyExists {
+		if centralControllerExists := utils.FileExists(path.Join(cli_config.CliConfig.ControllersFolderPath, "central_controller.go")); centralControllerExists {
+			err = service_utils.AddCentralServiceToCentralControllerConstructor()
+			if err != nil {
+				utils.HandleError(err)
+			}
+		}
 	}
 
 	fmt.Println("✅ Central service generated successfully.")

@@ -1,9 +1,9 @@
 package {{.Package}}
-
+{{ if .CentralServiceExists }}
 import (
-	{{ if .CentralServiceExists }}"{{GetProjectName}}/{{.ServicePackageImport}}"{{end}}
+    "{{GetProjectName}}/{{.ServicePackageImport}}"
 )
-
+{{end}}
 type CentralController struct {
 	// implementations
 }

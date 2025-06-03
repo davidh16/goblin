@@ -1011,3 +1011,90 @@ func ListExistingServices() ([]ServiceData, error) {
 
 	return services, nil
 }
+
+func AddCentralServiceToCentralControllerConstructor() error {
+	fset := token.NewFileSet()
+
+	centralControllerFilePath := path.Join(cli_config.CliConfig.ControllersFolderPath, "central_controller.go")
+
+	node, err := parser.ParseFile(fset, centralControllerFilePath, nil, parser.AllErrors)
+	if err != nil {
+		return err
+	}
+
+	// Add import if not already present
+	importPath := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ServicesFolderPath)
+	hasImport := false
+	for _, imp := range node.Imports {
+		if imp.Path.Value == fmt.Sprintf("\"%s\"", importPath) {
+			hasImport = true
+			break
+		}
+	}
+	if !hasImport {
+		newImport := &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("\"%s\"", importPath),
+			},
+		}
+		// Add to the import declarations
+		found := false
+		for _, decl := range node.Decls {
+			if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
+				genDecl.Specs = append(genDecl.Specs, newImport)
+				found = true
+				break
+			}
+		}
+		if !found {
+			// No existing import block, create one
+			node.Decls = append([]ast.Decl{
+				&ast.GenDecl{
+					Tok: token.IMPORT,
+					Specs: []ast.Spec{
+						newImport,
+					},
+				},
+			}, node.Decls...)
+		}
+	}
+
+	// Modify constructor parameter
+	ast.Inspect(node, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "NewCentralController" {
+			return true
+		}
+
+		// Check if centralService already exists
+		for _, param := range fn.Type.Params.List {
+			if len(param.Names) > 0 && param.Names[0].Name == "centralService" {
+				return false
+			}
+		}
+
+		// Add parameter: centralService *services.CentralService
+		param := &ast.Field{
+			Names: []*ast.Ident{ast.NewIdent("centralService")},
+			Type: &ast.StarExpr{
+				X: &ast.SelectorExpr{
+					X:   ast.NewIdent("services"),
+					Sel: ast.NewIdent("CentralService"),
+				},
+			},
+		}
+		fn.Type.Params.List = append(fn.Type.Params.List, param)
+
+		return false
+	})
+
+	// Write back to file
+	file, err := os.Create(centralControllerFilePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return printer.Fprint(file, fset, node)
+}

@@ -1,0 +1,6 @@
+CREATE TABLE {{.TableName}} (
+{{- range $i, $col := .MigrationColumns }}
+  {{$col.Name}} {{$col.SQLType}}{{if $col.IsPrimaryKey}} PRIMARY KEY{{end}}{{if $col.IsUnique}} UNIQUE{{end}}{{if $col.HasDefault}} DEFAULT {{$col.DefaultExpr}}{{end}}{{if and (not $col.IsPrimaryKey) (not $col.HasDefault)}} {{if $col.Nullable}}NULL{{else}}NOT NULL{{end}}{{end}}{{if lt (add $i 1) (len $.MigrationColumns)}},{{end}}
+{{- end }}
+);
+

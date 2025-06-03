@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"goblin/cli_config"
 	"goblin/utils"
+	"goblin/utils/repo_utils"
 	"os"
 	"path"
 	"strings"
@@ -115,6 +116,15 @@ func GenerateCentralRepo() {
 	if err != nil {
 		fmt.Println("Template exec error:", err)
 		return
+	}
+
+	if !alreadyExists {
+		if centralServiceExists := utils.FileExists(path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go")); centralServiceExists {
+			err = repo_utils.AddCentralRepoToCentralServiceConstructor()
+			if err != nil {
+				utils.HandleError(err)
+			}
+		}
 	}
 
 	fmt.Println("✅ Central repository generated successfully.")

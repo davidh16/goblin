@@ -1,9 +1,14 @@
 package {{.ServicePackage}}
+{{ if .CentralRepoExists }}
+import (
+    "{{GetProjectName}}/{{.RepoPackageImport}}"
+)
+{{end}}
 
 type CentralService struct {
 	// implementations
 }
 
-func NewCentralService() *CentralService {
+func NewCentralService({{ if .CentralRepoExists }}centralRepo *{{.RepoPackage}}.CentralRepo{{end}}) *CentralService {
 	return &CentralService{}
 }
