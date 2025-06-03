@@ -1,5 +1,5 @@
 CREATE TABLE {{.TableName}}(
-    uuid VARCHAR PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4()
+    uuid UUID PRIMARY KEY UNIQUE DEFAULT uuid_generate_v4()
     created_at timestamp DEFAULT CURRENT_TIMESTAMP
     updated_at timestamp
 );
