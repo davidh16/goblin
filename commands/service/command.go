@@ -123,17 +123,22 @@ func serviceCmdHandler() {
 	serviceData.RepoStrategy = service_utils.RepoOptionsStrategyMap[repoStrategyChosenOption]
 
 	if serviceData.RepoStrategy == service_utils.RepoStrategyExistingRepo {
-		err = survey.AskOne(&survey.Select{
+		var chosenRepos []string
+		err = survey.AskOne(&survey.MultiSelect{
 			Message: "Select a repo to use:",
 			Options: utils.Keys(existingReposMap),
-		}, &serviceData.RepoData.RepoEntity)
+		}, &chosenRepos)
 		if err != nil {
 			utils.HandleError(err)
+		}
+
+		for _, repo := range chosenRepos {
+			serviceData.RepoData = append(serviceData.RepoData, *existingReposMap[repo])
 		}
 	}
 
 	if serviceData.RepoStrategy == service_utils.RepoStrategyNewRepo {
-		serviceData.RepoData = service_utils.PrepareRepo()
+		serviceData.RepoData = append(serviceData.RepoData, *service_utils.PrepareRepo())
 	}
 
 	var toImplement bool
@@ -141,7 +146,7 @@ func serviceCmdHandler() {
 	case service_utils.RepoStrategyNewRepo:
 		var decision string
 		prompt := &survey.Select{
-			Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(serviceData.RepoData.SelectedRepoMethodsToImplement),
+			Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(&serviceData.RepoData[0], serviceData.RepoData[0].SelectedRepoMethodsToImplement),
 			Options: []string{
 				"Yes, choose methods to implement",
 				"No, skip this step",
@@ -157,7 +162,7 @@ func serviceCmdHandler() {
 		if toImplement {
 			selectedServiceProxyMethodsPrompt := &survey.MultiSelect{
 				Message: "Which service proxy methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
-				Options: serviceData.RepoData.SelectedRepoMethodsToImplement,
+				Options: serviceData.RepoData[0].SelectedRepoMethodsToImplement,
 			}
 			err = survey.AskOne(selectedServiceProxyMethodsPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
 			if err != nil {
@@ -167,32 +172,35 @@ func serviceCmdHandler() {
 
 	case service_utils.RepoStrategyExistingRepo:
 
-		existingRepoMethods, err := service_utils.ListExistingRepoMethods(serviceData.RepoData)
-		if err != nil {
-			utils.HandleError(err)
-		}
+		for _, repo := range serviceData.RepoData {
 
-		var decision string
-		prompt := &survey.Select{
-			Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(existingRepoMethods),
-			Options: []string{
-				"Yes, choose methods to implement",
-				"No, skip this step",
-			},
-		}
-		err = survey.AskOne(prompt, &decision)
-		if err != nil {
-			utils.HandleError(err)
-		}
-		toImplement = decision == "Yes, choose methods to implement"
-		if toImplement {
-			selectMethodsToImplementPrompt := &survey.MultiSelect{
-				Message: "Which methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
-				Options: existingRepoMethods,
-			}
-			err = survey.AskOne(selectMethodsToImplementPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
+			existingRepoMethods, err := service_utils.ListExistingRepoMethods(&repo)
 			if err != nil {
 				utils.HandleError(err)
+			}
+
+			var decision string
+			prompt := &survey.Select{
+				Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(&repo, existingRepoMethods),
+				Options: []string{
+					"Yes, choose methods to implement",
+					"No, skip this step",
+				},
+			}
+			err = survey.AskOne(prompt, &decision)
+			if err != nil {
+				utils.HandleError(err)
+			}
+			toImplement = decision == "Yes, choose methods to implement"
+			if toImplement {
+				selectMethodsToImplementPrompt := &survey.MultiSelect{
+					Message: "Which methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
+					Options: existingRepoMethods,
+				}
+				err = survey.AskOne(selectMethodsToImplementPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
+				if err != nil {
+					utils.HandleError(err)
+				}
 			}
 		}
 	case service_utils.RepoStrategyNoImplementation:
