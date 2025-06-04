@@ -66,11 +66,6 @@ const (
 	RepoStrategyNoImplementation
 )
 
-type RepoInfo struct {
-	Name string // Struct name
-	File string // Full file path
-}
-
 // PrepareRepo interacts with the user through CLI prompts to configure a new repository setup.
 // It asks for repo name, model strategy, and repository methods to implement, then returns the filled repo_utils.RepoData.
 func PrepareRepo() *repo_utils.RepoData {

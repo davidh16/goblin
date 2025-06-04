@@ -107,3 +107,55 @@ func CentralControllerFlagHandler() {
 
 	fmt.Println("✅ Central controller generated successfully.")
 }
+
+func GenerateCentralController(controllerData *controller_utils.ControllerData) error {
+	centralControllerPath := path.Join(cli_config.CliConfig.ControllersFolderPath, "central_controller.go")
+
+	alreadyExists := utils.FileExists(centralControllerPath)
+	if !alreadyExists {
+		centralServiceExists := utils.FileExists(path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go"))
+
+		f, err := os.Create(centralControllerPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				err = os.Mkdir(cli_config.CliConfig.ControllersFolderPath, 0755) // 0755 = rwxr-xr-x
+				if err != nil {
+					fmt.Println("Error creating folder:", err)
+				}
+				f, err = os.Create(centralControllerPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		defer f.Close()
+
+		funcMap := template.FuncMap{
+			"GetProjectName": utils.GetProjectName,
+		}
+
+		tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFiles(controller_utils.CentralControllerTemplatePath)
+		if err != nil {
+			return err
+		}
+
+		templateData := struct {
+			Package              string
+			CentralServiceExists bool
+			ServicePackage       string
+			ServicePackageImport string
+		}{
+			Package:              strings.Split(cli_config.CliConfig.ControllersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ControllersFolderPath, "/"))-1],
+			ServicePackageImport: cli_config.CliConfig.ServicesFolderPath,
+			ServicePackage:       strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1],
+			CentralServiceExists: centralServiceExists,
+		}
+
+		err = tmpl.Execute(f, templateData)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
