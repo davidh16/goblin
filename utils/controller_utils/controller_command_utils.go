@@ -29,14 +29,14 @@ type ControllerData struct {
 	ModelEntity                              string // i.e User
 	CentralControllerExists                  bool
 	ServiceStrategy                          ServiceStrategy
-	ServiceData                              *service_utils.ServiceData
+	ServiceData                              []service_utils.ServiceData
 }
 
 // NewControllerData creates and returns a new ControllerData struct pointer.
 // It initializes its ServiceData field with a new ServiceData instance.
 func NewControllerData() *ControllerData {
 	return &ControllerData{
-		ServiceData: service_utils.NewServiceData(),
+		ServiceData: []service_utils.ServiceData{},
 	}
 }
 
@@ -311,45 +311,48 @@ func PrepareService() (*service_utils.ServiceData, error) {
 	return serviceData, nil
 }
 
-func ExecuteCreateService(serviceData *service_utils.ServiceData) error {
-	if serviceData.RepoStrategy == service_utils.RepoStrategyNewRepo {
-		err := service_utils.ExecuteCreateRepo(serviceData.RepoData)
+func ExecuteCreateService(serviceData []service_utils.ServiceData) error {
+	for _, service := range serviceData {
+		if service.RepoStrategy == service_utils.RepoStrategyNewRepo {
+			err := service_utils.ExecuteCreateRepo(service.RepoData)
+			if err != nil {
+				return err
+			}
+		}
+
+		if !service.CentralServiceExists {
+			central_service.GenerateCentralService()
+		}
+
+		if !utils.FileExists(service.ServiceFilePath) {
+			err := service_utils.AddNewServiceToCentralService(&service)
+			if err != nil {
+				return err
+			}
+		}
+
+		err := service_utils.CreateService(&service)
 		if err != nil {
 			return err
 		}
-	}
 
-	if !serviceData.CentralServiceExists {
-		central_service.GenerateCentralService()
-	}
-
-	if !utils.FileExists(serviceData.ServiceFilePath) {
-		err := service_utils.AddNewServiceToCentralService(serviceData)
-		if err != nil {
-			return err
+		if service.RepoStrategy != service_utils.RepoStrategyNoImplementation {
+			err = service_utils.AddRepoToService(&service)
+			if err != nil {
+				return err
+			}
 		}
-	}
 
-	err := service_utils.CreateService(serviceData)
-	if err != nil {
-		return err
-	}
-
-	if serviceData.RepoStrategy != service_utils.RepoStrategyNoImplementation {
-		err = service_utils.AddRepoToService(serviceData)
-		if err != nil {
-			return err
+		if len(service.SelectedServiceProxyMethodToImplement) > 0 {
+			err = service_utils.CopyRepoMethodsToService(&service, service.SelectedServiceProxyMethodToImplement)
+			if err != nil {
+				return err
+			}
 		}
+
+		fmt.Println(fmt.Sprintf("✅ %s service generated successfully.", service.ServiceEntity))
 	}
 
-	if len(serviceData.SelectedServiceProxyMethodToImplement) > 0 {
-		err = service_utils.CopyRepoMethodsToService(serviceData, serviceData.SelectedServiceProxyMethodToImplement)
-		if err != nil {
-			return err
-		}
-	}
-
-	fmt.Println(fmt.Sprintf("✅ %s service generated successfully.", serviceData.ServiceEntity))
 	return nil
 }
 
@@ -434,11 +437,11 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 			var constructorArgs []ast.Expr
 			if controllerData.ServiceData != nil {
 
-				constructorArgs = []ast.Expr{
-					&ast.SelectorExpr{
+				for _, service := range controllerData.ServiceData {
+					constructorArgs = append(constructorArgs, &ast.SelectorExpr{
 						X:   ast.NewIdent("centralService"),
-						Sel: ast.NewIdent(controllerData.ServiceData.ServiceEntity),
-					},
+						Sel: ast.NewIdent(service.ServiceFullName),
+					})
 				}
 
 				paramValue := "centralService"
@@ -597,10 +600,12 @@ func AddServiceToController(controllerData *ControllerData) error {
 		case *ast.TypeSpec:
 			if x.Name.Name == controllerData.ControllerFullName {
 				if structType, ok := x.Type.(*ast.StructType); ok {
-					structType.Fields.List = append(structType.Fields.List, &ast.Field{
-						Names: []*ast.Ident{ast.NewIdent(controllerData.ServiceData.ServiceEntity)},
-						Type:  ast.NewIdent(servicePackage + "." + controllerData.ServiceData.ServiceEntity + "Interface"),
-					})
+					for _, service := range controllerData.ServiceData {
+						structType.Fields.List = append(structType.Fields.List, &ast.Field{
+							Names: []*ast.Ident{ast.NewIdent(service.ServiceFullName)},
+							Type:  ast.NewIdent(servicePackage + "." + service.ServiceFullName + "Interface"),
+						})
+					}
 					structUpdated = true
 				}
 			}
@@ -608,39 +613,41 @@ func AddServiceToController(controllerData *ControllerData) error {
 		// Update the constructor
 		case *ast.FuncDecl:
 			if x.Name.Name == "New"+controllerData.ControllerFullName {
-				// First: ensure the parameter is added if missing
-				paramExists := false
-				for _, param := range x.Type.Params.List {
-					for _, name := range param.Names {
-						if name.Name == utils.PascalToCamel(controllerData.ServiceData.ServiceEntity) {
-							paramExists = true
+				for _, service := range controllerData.ServiceData {
+					// First: ensure the parameter is added if missing
+					paramExists := false
+					for _, param := range x.Type.Params.List {
+						for _, name := range param.Names {
+							if name.Name == utils.PascalToCamel(service.ServiceFullName) {
+								paramExists = true
+								break
+							}
+						}
+						if paramExists {
 							break
 						}
 					}
-					if paramExists {
-						break
+
+					if !paramExists {
+						x.Type.Params.List = append(x.Type.Params.List, &ast.Field{
+							Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(service.ServiceFullName))},
+							Type: &ast.SelectorExpr{
+								X:   ast.NewIdent(servicePackage),
+								Sel: ast.NewIdent(service.ServiceFullName + "Interface"),
+							},
+						})
 					}
-				}
 
-				if !paramExists {
-					x.Type.Params.List = append(x.Type.Params.List, &ast.Field{
-						Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(controllerData.ServiceData.ServiceEntity))},
-						Type: &ast.SelectorExpr{
-							X:   ast.NewIdent(servicePackage),
-							Sel: ast.NewIdent(controllerData.ServiceData.ServiceEntity + "Interface"),
-						},
-					})
-				}
-
-				// Then: update the constructor body as you already did
-				if len(x.Body.List) > 0 {
-					if retStmt, ok := x.Body.List[0].(*ast.ReturnStmt); ok {
-						if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
-							compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
-								Key:   ast.NewIdent(controllerData.ServiceData.ServiceEntity),
-								Value: ast.NewIdent(utils.PascalToCamel(controllerData.ServiceData.ServiceEntity)),
-							})
-							constructorUpdated = true
+					// Then: update the constructor body as you already did
+					if len(x.Body.List) > 0 {
+						if retStmt, ok := x.Body.List[0].(*ast.ReturnStmt); ok {
+							if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
+								compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
+									Key:   ast.NewIdent(service.ServiceFullName),
+									Value: ast.NewIdent(utils.PascalToCamel(service.ServiceFullName)),
+								})
+								constructorUpdated = true
+							}
 						}
 					}
 				}

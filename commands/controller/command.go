@@ -120,20 +120,26 @@ func controllerCmdHandler() {
 	controllerData.ServiceStrategy = controller_utils.ServiceOptionsStrategyMap[serviceStrategyChosenOption]
 
 	if controllerData.ServiceStrategy == controller_utils.ServiceStrategyExistingService {
-		err = survey.AskOne(&survey.Select{
+		var chosenServices []string
+		err = survey.AskOne(&survey.MultiSelect{
 			Message: "Select a service to use:",
 			Options: utils.Keys(existingServicesMap),
-		}, &controllerData.ServiceData.ServiceEntity)
+		}, &chosenServices)
 		if err != nil {
 			utils.HandleError(err)
+		}
+
+		for _, service := range chosenServices {
+			controllerData.ServiceData = append(controllerData.ServiceData, *existingServicesMap[service])
 		}
 	}
 
 	if controllerData.ServiceStrategy == controller_utils.ServiceStrategyNewService {
-		controllerData.ServiceData, err = controller_utils.PrepareService()
+		service, err := controller_utils.PrepareService()
 		if err != nil {
 			utils.HandleError(err)
 		}
+		controllerData.ServiceData = append(controllerData.ServiceData, *service)
 	}
 
 	if controllerData.ServiceStrategy == controller_utils.ServiceStrategyNewService {
