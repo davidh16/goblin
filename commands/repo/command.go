@@ -9,9 +9,12 @@ import (
 	"goblin/commands/model"
 	central_repo "goblin/commands/repo/flags/central-repo"
 	"goblin/utils"
+	"goblin/utils/controller_utils"
 	"goblin/utils/model_utils"
 	"goblin/utils/repo_utils"
+	"goblin/utils/service_utils"
 	"path"
+	"strings"
 )
 
 var (
@@ -209,6 +212,73 @@ func repoCmdHandler() {
 		err = repo_utils.AddMethodsToRepo(repoData, selectedRawMethods)
 		if err != nil {
 			utils.HandleError(err, "Unable to add methods to repo")
+		}
+	}
+
+	var toInjectRepoToService bool
+	injectPrompt := &survey.Confirm{
+		Message: "Do you wish to inject this repo to a service ?",
+		Default: true,
+	}
+	err = survey.AskOne(injectPrompt, &toInjectRepoToService)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	if toInjectRepoToService {
+
+		//todo list existing services
+		existingServices, err := controller_utils.ListExistingServices()
+		if err != nil {
+			utils.HandleError(err, "Unable to list existing services")
+		}
+		existingServicesMap := make(map[string]*service_utils.ServiceData)
+		for _, existingService := range existingServices {
+			serviceFileName := utils.PascalToSnake(existingService.ServiceFullName) + ".go"
+			serviceFilePath := path.Join(cli_config.CliConfig.ServicesFolderPath, serviceFileName)
+			serviceEntity := strings.TrimSuffix(existingService.ServiceFullName, "Service")
+
+			service := service_utils.ServiceData{
+				ServiceEntity:   serviceEntity,
+				ServiceFileName: serviceFileName,
+				ServiceFilePath: serviceFilePath,
+				ServiceFullName: existingService.ServiceFullName,
+				RepoData:        []repo_utils.RepoData{*repoData},
+			}
+
+			existingServicesMap[service.ServiceFullName] = &service
+		}
+
+		var selectedService string
+		err = survey.AskOne(&survey.Select{
+			Message: "Select a service to inject repo to:",
+			Options: utils.Keys(existingServicesMap),
+		}, &selectedService)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		fmt.Println(existingServicesMap[selectedService].ServiceFullName)
+
+		err = service_utils.AddRepoToService(existingServicesMap[selectedService])
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		if len(repoData.SelectedRepoMethodsToImplement) > 0 {
+			selectMethodsToImplementPrompt := &survey.MultiSelect{
+				Message: "Which methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
+				Options: repoData.SelectedRepoMethodsToImplement,
+			}
+			err = survey.AskOne(selectMethodsToImplementPrompt, &existingServicesMap[selectedService].SelectedServiceProxyMethodToImplement)
+			if err != nil {
+				utils.HandleError(err)
+			}
+
+			err = service_utils.CopyRepoMethodsToService(existingServicesMap[selectedService], existingServicesMap[selectedService].SelectedServiceProxyMethodToImplement)
+			if err != nil {
+				utils.HandleError(err)
+			}
 		}
 	}
 

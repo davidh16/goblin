@@ -714,10 +714,10 @@ func AddRepoToService(serviceData *ServiceData) error {
 	})
 
 	if !structUpdated {
-		return fmt.Errorf("struct %sService not found", serviceData.ServiceEntity)
+		return fmt.Errorf("struct %s not found", serviceData.ServiceFullName)
 	}
 	if !constructorUpdated {
-		return fmt.Errorf("constructor New%sService not found", serviceData.ServiceEntity)
+		return fmt.Errorf("constructor New%s not found", serviceData.ServiceFullName)
 	}
 
 	// Create the output file
