@@ -10,7 +10,6 @@ import (
 	"goblin/utils/controller_utils"
 	"goblin/utils/service_utils"
 	"path"
-	"strings"
 )
 
 var CentralControllerFlag bool
@@ -101,19 +100,7 @@ func controllerCmdHandler() {
 	}
 	existingServicesMap := make(map[string]*service_utils.ServiceData)
 	for _, existingService := range existingServices {
-
-		serviceFileName := utils.PascalToSnake(existingService.ServiceFullName) + ".go"
-		serviceFilePath := path.Join(cli_config.CliConfig.ServicesFolderPath, serviceFileName)
-		serviceEntity := strings.TrimSuffix(existingService.ServiceFullName, "Service")
-
-		service := service_utils.ServiceData{
-			ServiceEntity:   serviceEntity,
-			ServiceFileName: serviceFileName,
-			ServiceFilePath: serviceFilePath,
-			ServiceFullName: existingService.ServiceFullName,
-		}
-
-		existingServicesMap[service.ServiceFullName] = &service
+		existingServicesMap[existingService.ServiceFullName] = &existingService
 	}
 
 	// controller_utils.ServiceOptionsStrategyMap keys are used to list options for choosing service strategy, if there are no existing services, that key (option) has to be removed from the map

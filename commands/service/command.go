@@ -7,6 +7,7 @@ import (
 	"goblin/cli_config"
 	central_service "goblin/commands/service/flags/central-service"
 	"goblin/utils"
+	"goblin/utils/controller_utils"
 	"goblin/utils/repo_utils"
 	"goblin/utils/service_utils"
 	"path"
@@ -241,6 +242,45 @@ func serviceCmdHandler() {
 
 	if len(serviceData.SelectedServiceProxyMethodToImplement) > 0 {
 		err = service_utils.CopyRepoMethodsToService(serviceData, serviceData.SelectedServiceProxyMethodToImplement)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	var toInjectServiceToController bool
+	injectPrompt := &survey.Confirm{
+		Message: "Do you wish to inject this service to a controller ?",
+		Default: true,
+	}
+	err = survey.AskOne(injectPrompt, &toInjectServiceToController)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	if toInjectServiceToController {
+
+		existingControllers, err := controller_utils.ListExistingControllers()
+		if err != nil {
+			utils.HandleError(err, "Unable to list existing services")
+		}
+		existingControllersMap := make(map[string]*controller_utils.ControllerData)
+		for _, existingController := range existingControllers {
+			existingController.ServiceData = []service_utils.ServiceData{*serviceData}
+			existingControllersMap[existingController.ControllerFullName] = &existingController
+		}
+
+		var selectedController string
+		err = survey.AskOne(&survey.Select{
+			Message: "Select a controller to inject repo to:",
+			Options: utils.Keys(existingControllersMap),
+		}, &selectedController)
+		if err != nil {
+			utils.HandleError(err)
+		}
+
+		fmt.Println(existingControllersMap[selectedController].ControllerFullName)
+
+		err = controller_utils.AddServiceToController(existingControllersMap[selectedController])
 		if err != nil {
 			utils.HandleError(err)
 		}

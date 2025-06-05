@@ -678,3 +678,68 @@ func AddServiceToController(controllerData *ControllerData) error {
 
 	return nil
 }
+
+// ListExistingControllers scans the services folder and identifies existing services
+// service struct is detected by checking if it has a suffix "Controller" in its name
+func ListExistingControllers() ([]ControllerData, error) {
+	var controllers []ControllerData
+
+	err := filepath.WalkDir(cli_config.CliConfig.ControllersFolderPath, func(controllerPath string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !strings.HasSuffix(controllerPath, ".go") {
+			return nil // skip non-Go files
+		}
+
+		fileSet := token.NewFileSet()
+		node, err := parser.ParseFile(fileSet, controllerPath, nil, parser.ParseComments)
+		if err != nil {
+			return err
+		}
+
+		for _, decl := range node.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok || genDecl.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range genDecl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				if !strings.HasSuffix(typeSpec.Name.Name, "Controller") {
+					continue
+				}
+
+				if typeSpec.Name.Name == "CentralController" {
+					continue
+				}
+
+				// Check that it's actually a struct type
+				_, ok = typeSpec.Type.(*ast.StructType)
+				if !ok {
+					continue
+				}
+
+				structName := typeSpec.Name.Name
+				controllers = append(controllers, ControllerData{
+					ControllerEntity:        strings.TrimSuffix(structName, "Controller"),
+					ControllerFullName:      structName,
+					ControllerFilePath:      controllerPath,
+					ControllerFileName:      filepath.Base(controllerPath),
+					ControllerNameSnakeCase: utils.PascalToSnake(strings.TrimSuffix(structName, "Controller")),
+				})
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+
+	return controllers, nil
+}

@@ -14,7 +14,6 @@ import (
 	"goblin/utils/repo_utils"
 	"goblin/utils/service_utils"
 	"path"
-	"strings"
 )
 
 var (
@@ -227,26 +226,14 @@ func repoCmdHandler() {
 
 	if toInjectRepoToService {
 
-		//todo list existing services
 		existingServices, err := controller_utils.ListExistingServices()
 		if err != nil {
 			utils.HandleError(err, "Unable to list existing services")
 		}
 		existingServicesMap := make(map[string]*service_utils.ServiceData)
 		for _, existingService := range existingServices {
-			serviceFileName := utils.PascalToSnake(existingService.ServiceFullName) + ".go"
-			serviceFilePath := path.Join(cli_config.CliConfig.ServicesFolderPath, serviceFileName)
-			serviceEntity := strings.TrimSuffix(existingService.ServiceFullName, "Service")
-
-			service := service_utils.ServiceData{
-				ServiceEntity:   serviceEntity,
-				ServiceFileName: serviceFileName,
-				ServiceFilePath: serviceFilePath,
-				ServiceFullName: existingService.ServiceFullName,
-				RepoData:        []repo_utils.RepoData{*repoData},
-			}
-
-			existingServicesMap[service.ServiceFullName] = &service
+			existingService.RepoData = []repo_utils.RepoData{*repoData}
+			existingServicesMap[existingService.ServiceFullName] = &existingService
 		}
 
 		var selectedService string
