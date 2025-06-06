@@ -1,8 +1,8 @@
 package middleware_utils
 
-var middlewareOptions = []string{"LoggingMiddleware", "JwtMiddleware", "LoggingMiddleware", "RateLimiterMiddleware"}
+var MiddlewareOptions = []string{"RecoverMiddleware", "LoggingMiddleware", "JwtMiddleware", "LoggingMiddleware", "RateLimiterMiddleware"}
 
-var middlewareOptionTemplatePathMap = map[string]string{
+var MiddlewareOptionTemplatePathMap = map[string]string{
 	"LoggingMiddleware":     LoggingMiddlewareTemplatePath,
 	"JwtMiddleware":         JwtMiddlewareTemplatePath,
 	"LoggerMiddleware":      LoggingMiddlewareTemplatePath,

@@ -8,6 +8,7 @@ import (
 	"goblin/commands/migration"
 	"goblin/commands/model"
 	"goblin/commands/repo"
+	"goblin/commands/router"
 	"goblin/commands/service"
 	"goblin/commands/workerize"
 	"os"
@@ -70,4 +71,6 @@ func init() {
 	rootCmd.AddCommand(logger.LoggerCmd)
 
 	rootCmd.AddCommand(migration.MigrationCmd)
+
+	rootCmd.AddCommand(router.RouterCmd)
 }

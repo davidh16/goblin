@@ -22,7 +22,7 @@ var (
 
 var RepoCmd = &cobra.Command{
 	Use:   "repo",
-	Short: "Generate custom repository repository",
+	Short: "Generate custom repository",
 	Run: func(cmd *cobra.Command, args []string) {
 		if CentralRepoFlag {
 			central_repo.GenerateCentralRepo()

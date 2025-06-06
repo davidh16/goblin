@@ -22,6 +22,8 @@ type Config struct {
 	LoggerFolderPath            string `yaml:"logger_folder_path"`
 	ProjectName                 string `yaml:"project_name"`
 	MigrationsFolderPath        string `yaml:"migrations_folder_path"` // path for folder where migration files are located
+	RouterFolderPath            string `yaml:"router_folder_path"`
+	MiddlewaresFolderPath       string `yaml:"middlewares_folder_path"`
 }
 
 var CliConfig *Config
