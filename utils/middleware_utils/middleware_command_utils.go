@@ -77,6 +77,13 @@ func GenerateMiddlewares(middlewareOptions []string) error {
 			}
 		}
 
+		if option == "JwtMiddleware" {
+			err := generateAuthJwtFile()
+			if err != nil {
+				return err
+			}
+		}
+
 		tmpl, err := template.ParseFiles(MiddlewareOptionTemplatePathMap[option])
 		if err != nil {
 			return err
@@ -129,4 +136,31 @@ func ListExistingMiddlewares() ([]string, error) {
 
 	return middlewares, err
 
+}
+
+func generateAuthJwtFile() error {
+
+	if exists := utils.FileExists(cli_config.CliConfig.AuthFolderPath); !exists {
+		err := os.MkdirAll(cli_config.CliConfig.AuthFolderPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	tmpl, err := template.ParseFiles(AuthJwtTemplatePath)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(path.Join(cli_config.CliConfig.AuthFolderPath, "jwt.go"))
+	if err != nil {
+		return err
+	}
+
+	err = tmpl.Execute(f, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

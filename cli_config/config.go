@@ -24,6 +24,7 @@ type Config struct {
 	MigrationsFolderPath        string `yaml:"migrations_folder_path"` // path for folder where migration files are located
 	RouterFolderPath            string `yaml:"router_folder_path"`
 	MiddlewaresFolderPath       string `yaml:"middlewares_folder_path"`
+	AuthFolderPath              string `yaml:"auth_folder_path"`
 }
 
 var CliConfig *Config
