@@ -3,11 +3,15 @@ package middleware_utils
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"goblin/cli_config"
 	"goblin/utils"
 	"goblin/utils/logger_utils"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 )
@@ -87,6 +91,42 @@ func GenerateMiddlewares(middlewareOptions []string) error {
 		if err != nil {
 			return err
 		}
+
+		fmt.Println(fmt.Sprintf("✅ %s generated successfully.", option))
 	}
 	return nil
+}
+
+func ListExistingMiddlewares() ([]string, error) {
+
+	var middlewares []string
+
+	err := filepath.Walk(cli_config.CliConfig.MiddlewaresFolderPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() || !strings.HasSuffix(info.Name(), ".go") {
+			return nil
+		}
+
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return fmt.Errorf("failed to parse file %s: %w", path, err)
+		}
+
+		for _, decl := range node.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && strings.HasSuffix(fn.Name.Name, "Middleware") {
+
+				name := fn.Name.Name
+				if strings.HasPrefix(name, "New") {
+					name = strings.TrimPrefix(name, "New")
+				}
+
+				middlewares = append(middlewares, name)
+			}
+		}
+
+		return nil
+	})
+
+	return middlewares, err
+
 }
