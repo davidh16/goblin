@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
+	"goblin/cli_config"
 	"goblin/utils"
 	"goblin/utils/middleware_utils"
 	"goblin/utils/router_utils"
+	"path"
 )
 
 var RouterCmd = &cobra.Command{
@@ -18,6 +20,21 @@ var RouterCmd = &cobra.Command{
 }
 
 func routerCmdHandler() {
+
+	if exists := utils.FileExists(path.Join(cli_config.CliConfig.RouterFolderPath, "router.go")); exists {
+		var overwrite bool
+		injectPrompt := &survey.Confirm{
+			Message: "Router already exists, do you wish to overwrite it ?",
+			Default: false,
+		}
+		err := survey.AskOne(injectPrompt, &overwrite)
+		if err != nil {
+			utils.HandleError(err)
+		}
+		if !overwrite {
+			return
+		}
+	}
 
 	routerData := router_utils.NewRouterData()
 
@@ -33,6 +50,10 @@ func routerCmdHandler() {
 
 	if len(selectedMiddlewares) > 0 {
 		routerData.ImplementMiddlewares = true
+		err = middleware_utils.GenerateMiddlewares(selectedMiddlewares)
+		if err != nil {
+			utils.HandleError(err)
+		}
 	}
 	for _, m := range selectedMiddlewares {
 		switch m {
@@ -52,5 +73,5 @@ func routerCmdHandler() {
 		utils.HandleError(err)
 	}
 
-	fmt.Println("✅ router generated successfully.")
+	fmt.Println("✅ Router generated successfully.")
 }

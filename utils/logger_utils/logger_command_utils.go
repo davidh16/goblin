@@ -2,6 +2,7 @@ package logger_utils
 
 import (
 	"goblin/cli_config"
+	"goblin/utils"
 	"os"
 	"path"
 	"strings"
@@ -14,6 +15,14 @@ const (
 )
 
 func GenerateLogger() error {
+
+	if exists := utils.FileExists(cli_config.CliConfig.LoggerFolderPath); !exists {
+		err := os.Mkdir(cli_config.CliConfig.LoggerFolderPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
 	tmpl, err := template.ParseFiles(LoggerTemplatePath)
 	if err != nil {
 		return err

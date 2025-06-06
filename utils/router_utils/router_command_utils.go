@@ -2,6 +2,7 @@ package router_utils
 
 import (
 	"goblin/cli_config"
+	"goblin/utils"
 	"os"
 	"path"
 	"strings"
@@ -21,6 +22,14 @@ func NewRouterData() *RouterData {
 }
 
 func GenerateRouter(routerData *RouterData) error {
+
+	if !utils.FileExists(cli_config.CliConfig.RouterFolderPath) {
+		err := os.MkdirAll(cli_config.CliConfig.RouterFolderPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
 	tmpl, err := template.ParseFiles(RouterTemplatePath)
 	if err != nil {
 		return err
@@ -33,13 +42,23 @@ func GenerateRouter(routerData *RouterData) error {
 	defer f.Close()
 
 	templateData := struct {
+		RouterPackage            string
 		ImplementMiddlewares     bool
 		MiddlewaresPackage       string
 		MiddlewaresPackageImport string
+		RecoverMiddleware        bool
+		AllowOriginMiddleware    bool
+		RateLimiterMiddleware    bool
+		LoggingMiddleware        bool
 	}{
+		RouterPackage:            strings.Split(cli_config.CliConfig.RouterFolderPath, "/")[len(strings.Split(cli_config.CliConfig.RouterFolderPath, "/"))-1],
 		ImplementMiddlewares:     routerData.ImplementMiddlewares,
 		MiddlewaresPackage:       strings.Split(cli_config.CliConfig.MiddlewaresFolderPath, "/")[len(strings.Split(cli_config.CliConfig.MiddlewaresFolderPath, "/"))-1],
 		MiddlewaresPackageImport: path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.MiddlewaresFolderPath),
+		RecoverMiddleware:        routerData.RecoverMiddleware,
+		AllowOriginMiddleware:    routerData.AllowOriginMiddleware,
+		RateLimiterMiddleware:    routerData.RateLimiterMiddleware,
+		LoggingMiddleware:        routerData.LoggingMiddleware,
 	}
 
 	err = tmpl.Execute(f, templateData)

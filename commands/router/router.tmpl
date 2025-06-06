@@ -3,7 +3,7 @@ package {{.RouterPackage}}
 import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	{{if .ImplementMiddlewares}}{{.MiddlewaresPackageImport}}{{end}}
+	{{if .ImplementMiddlewares}}"{{.MiddlewaresPackageImport}}"{{end}}
 	"net/http"
 	"time"
 )
@@ -15,27 +15,27 @@ func InitRouter() *echo.Echo {
     {{if .RecoverMiddleware}}e.Use(middleware.Recover()){{end}}
     {{if .LoggingMiddleware}}e.Use({{.MiddlewaresPackage}}.LoggingMiddleware){{end}}
     {{if .AllowOriginMiddleware}}e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-                                 		AllowOriginFunc: middlewares.AllowOrigin,
-                                 		AllowMethods:    []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
-                                 	})){{end}}
+        AllowOriginFunc: {{.MiddlewaresPackage}}.AllowOrigin,
+        AllowMethods:    []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
+    })){{end}}
     {{if .RateLimiterMiddleware}}e.Use(middleware.RateLimiterWithConfig(
-                                 		NewRateLimiter().
-                                 			SetSkipper(middleware.DefaultSkipper).
-                                 			SetIdentifierExtractor(func(context echo.Context) (string, error) {
-                                 				id := context.RealIP()
-                                 				return id, nil
-                                 			}).
-                                 			SetStore(middleware.NewRateLimiterMemoryStoreWithConfig(
-                                 				middleware.RateLimiterMemoryStoreConfig{Rate: 100, Burst: 200, ExpiresIn: 5 * time.Minute},
-                                 			)).
-                                 			SetErrorHandler(func(context echo.Context, err error) error {
-                                 				return context.JSON(http.StatusForbidden, nil)
-                                 			}).
-                                 			SetDenyHandler(func(context echo.Context, identifier string, err error) error {
-                                 				return context.JSON(http.StatusTooManyRequests, nil)
-                                 			}).
-                                 			Build()),
-                                 	){{end}}
+        {{.MiddlewaresPackage}}.NewRateLimiter().
+                SetSkipper(middleware.DefaultSkipper).
+                SetIdentifierExtractor(func(context echo.Context) (string, error) {
+                    id := context.RealIP()
+                    return id, nil
+                }).
+                SetStore(middleware.NewRateLimiterMemoryStoreWithConfig(
+                    middleware.RateLimiterMemoryStoreConfig{Rate: 100, Burst: 200, ExpiresIn: 5 * time.Minute},
+                )).
+                SetErrorHandler(func(context echo.Context, err error) error {
+                    return context.JSON(http.StatusForbidden, nil)
+                }).
+                SetDenyHandler(func(context echo.Context, identifier string, err error) error {
+                    return context.JSON(http.StatusTooManyRequests, nil)
+                }).
+                Build()),
+    ){{end}}
 
 	// groups and setup routes with echojwt.Config middleware
 
