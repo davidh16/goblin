@@ -1,6 +1,7 @@
 package middleware_utils
 
 import (
+	"errors"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"go/ast"
@@ -16,7 +17,7 @@ import (
 	"text/template"
 )
 
-var MiddlewareOptions = []string{"RecoverMiddleware", "LoggingMiddleware", "JwtMiddleware", "LoggingMiddleware", "RateLimiterMiddleware", "AllowOriginMiddleware"}
+var MiddlewareOptions = []string{"RecoverMiddleware", "JwtMiddleware", "LoggingMiddleware", "RateLimiterMiddleware", "AllowOriginMiddleware"}
 
 var MiddlewareOptionTemplatePathMap = map[string]string{
 	"LoggingMiddleware":     LoggingMiddlewareTemplatePath,
@@ -79,6 +80,47 @@ func GenerateMiddlewares(middlewareOptions []string) error {
 
 		if option == "JwtMiddleware" {
 			err := generateAuthJwtFile()
+			if err != nil {
+				return err
+			}
+
+			workingDirectory, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			envFilePath := path.Join(workingDirectory, ".env")
+
+			envFile, err := os.OpenFile(envFilePath, os.O_CREATE|os.O_RDWR, 0644)
+			if err != nil {
+				return errors.New("error opening environment file")
+			}
+
+			err = utils.WriteToEnvFile(envFile, map[string]string{
+				"JWT_SECRET": "",
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		if option == "AllowOriginMiddleware" {
+			workingDirectory, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			envFilePath := path.Join(workingDirectory, ".env")
+
+			envFile, err := os.OpenFile(envFilePath, os.O_CREATE|os.O_RDWR, 0644)
+			if err != nil {
+				return errors.New("error opening environment file")
+			}
+
+			err = utils.WriteToEnvFile(envFile, map[string]string{
+				"ALLOW_ORIGINS":           "",
+				"ALLOW_ORIGINS_WILDCARDS": "",
+			})
 			if err != nil {
 				return err
 			}

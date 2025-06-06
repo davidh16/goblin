@@ -9,7 +9,7 @@ import (
 
 type RateLimiterMiddleware middleware.RateLimiterConfig
 
-func RateLimiterMiddleware() *RateLimiterMiddleware {
+func NewRateLimiterMiddleware() *RateLimiterMiddleware {
 	return &RateLimiterMiddleware{}
 }
 
@@ -43,7 +43,7 @@ func (r *RateLimiterMiddleware) Build() middleware.RateLimiterConfig {
 }
 
 func NewRateLimiterConfig() middleware.RateLimiterConfig {
-	return RateLimiterMiddleware().
+	return NewRateLimiterMiddleware().
 		SetSkipper(middleware.DefaultSkipper).
 		SetIdentifierExtractor(func(context echo.Context) (string, error) {
 			id := context.RealIP()
