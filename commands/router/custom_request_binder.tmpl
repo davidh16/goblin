@@ -1,0 +1,81 @@
+package {{.RouterPackage}}
+
+import (
+	"github.com/labstack/echo/v4"
+	"github.com/microcosm-cc/bluemonday"
+	"reflect"
+	"regexp"
+	"strings"
+)
+
+type CustomBinder struct{}
+
+// Bind method for CustomBinder
+func (cb *CustomBinder) Bind(i interface{}, c echo.Context) error {
+	db := new(echo.DefaultBinder)
+	if err := db.Bind(i, c); err != nil {
+		return err
+	}
+
+	// Check if interface has any string types and sanitize and trim them
+	sanitizeAndTrimStringFields(i)
+
+	return nil
+}
+
+// Function to sanitize and trim string fields recursively
+func sanitizeAndTrimStringFields(i interface{}) {
+	p := bluemonday.UGCPolicy()
+	v := reflect.ValueOf(i).Elem()
+	sanitizeAndTrimRecursive(v, p)
+}
+
+func containsHTML(s string) bool {
+	// Regular expression to detect HTML tags
+	re := regexp.MustCompile(`<\/?[^>]+(>|$)`)
+	return re.MatchString(s)
+}
+
+// Recursive helper function
+func sanitizeAndTrimRecursive(v reflect.Value, p *bluemonday.Policy) {
+	switch v.Kind() {
+	case reflect.String:
+		if !containsHTML(v.String()) {
+			return
+		}
+		sanitized := p.Sanitize(v.String())
+		v.SetString(strings.TrimSpace(sanitized))
+	case reflect.Ptr:
+		if !v.IsNil() {
+			elem := v.Elem()
+			if elem.Kind() == reflect.String {
+				if !containsHTML(elem.String()) {
+					return
+				}
+				str := elem.String()
+				sanitized := p.Sanitize(str)
+				elem.SetString(strings.TrimSpace(sanitized))
+			} else {
+				sanitizeAndTrimRecursive(elem, p)
+			}
+		}
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			sanitizeAndTrimRecursive(v.Field(i), p)
+		}
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			sanitizeAndTrimRecursive(v.Index(i), p)
+		}
+	case reflect.Map:
+		for _, key := range v.MapKeys() {
+			val := v.MapIndex(key)
+			sanitizeAndTrimRecursive(val, p)
+		}
+	case reflect.Interface:
+		if !v.IsNil() {
+			elem := v.Elem()
+			sanitizeAndTrimRecursive(elem, p)
+		}
+	}
+}
