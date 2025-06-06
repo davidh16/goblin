@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func AllowOrigin(origin string) (bool, error) {
+func AllowOriginMiddleware(origin string) (bool, error) {
 	// basic origins defined in file
 	allowedOrigins := strings.Split(os.Getenv("ALLOW_ORIGINS"), ",")
 	for _, allowedOrigin := range allowedOrigins {

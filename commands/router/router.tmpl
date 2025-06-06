@@ -15,11 +15,11 @@ func InitRouter() *echo.Echo {
     {{if .RecoverMiddleware}}e.Use(middleware.Recover()){{end}}
     {{if .LoggingMiddleware}}e.Use({{.MiddlewaresPackage}}.LoggingMiddleware){{end}}
     {{if .AllowOriginMiddleware}}e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-        AllowOriginFunc: {{.MiddlewaresPackage}}.AllowOrigin,
+        AllowOriginFunc: {{.MiddlewaresPackage}}.AllowOriginMiddleware,
         AllowMethods:    []string{http.MethodGet, http.MethodPut, http.MethodPost, http.MethodDelete},
     })){{end}}
     {{if .RateLimiterMiddleware}}e.Use(middleware.RateLimiterWithConfig(
-        {{.MiddlewaresPackage}}.NewRateLimiter().
+        {{.MiddlewaresPackage}}.NewRateLimiterMiddleware().
                 SetSkipper(middleware.DefaultSkipper).
                 SetIdentifierExtractor(func(context echo.Context) (string, error) {
                     id := context.RealIP()

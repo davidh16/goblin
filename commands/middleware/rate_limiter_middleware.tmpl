@@ -7,43 +7,43 @@ import (
 	"time"
 )
 
-type RateLimiter middleware.RateLimiterConfig
+type RateLimiterMiddleware middleware.RateLimiterConfig
 
-func NewRateLimiter() *RateLimiter {
-	return &RateLimiter{}
+func RateLimiterMiddleware() *RateLimiterMiddleware {
+	return &RateLimiterMiddleware{}
 }
 
-func (r *RateLimiter) SetSkipper(skipper func(ctx echo.Context) bool) *RateLimiter {
+func (r *RateLimiterMiddleware) SetSkipper(skipper func(ctx echo.Context) bool) *RateLimiterMiddleware {
 	r.Skipper = skipper
 	return r
 }
 
-func (r *RateLimiter) SetStore(store middleware.RateLimiterStore) *RateLimiter {
+func (r *RateLimiterMiddleware) SetStore(store middleware.RateLimiterStore) *RateLimiterMiddleware {
 	r.Store = store
 	return r
 }
 
-func (r *RateLimiter) SetIdentifierExtractor(extractor func(context echo.Context) (string, error)) *RateLimiter {
+func (r *RateLimiterMiddleware) SetIdentifierExtractor(extractor func(context echo.Context) (string, error)) *RateLimiterMiddleware {
 	r.IdentifierExtractor = extractor
 	return r
 }
 
-func (r *RateLimiter) SetErrorHandler(errorHandler func(context echo.Context, err error) error) *RateLimiter {
+func (r *RateLimiterMiddleware) SetErrorHandler(errorHandler func(context echo.Context, err error) error) *RateLimiterMiddleware {
 	r.ErrorHandler = errorHandler
 	return r
 }
 
-func (r *RateLimiter) SetDenyHandler(denyHandler func(context echo.Context, identifier string, err error) error) *RateLimiter {
+func (r *RateLimiterMiddleware) SetDenyHandler(denyHandler func(context echo.Context, identifier string, err error) error) *RateLimiterMiddleware {
 	r.DenyHandler = denyHandler
 	return r
 }
 
-func (r *RateLimiter) Build() middleware.RateLimiterConfig {
+func (r *RateLimiterMiddleware) Build() middleware.RateLimiterConfig {
 	return (middleware.RateLimiterConfig)(*r)
 }
 
 func NewRateLimiterConfig() middleware.RateLimiterConfig {
-	return NewRateLimiter().
+	return RateLimiterMiddleware().
 		SetSkipper(middleware.DefaultSkipper).
 		SetIdentifierExtractor(func(context echo.Context) (string, error) {
 			id := context.RealIP()
