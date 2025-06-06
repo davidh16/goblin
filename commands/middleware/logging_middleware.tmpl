@@ -1,0 +1,175 @@
+package {{.MiddlewaresPackage}}
+
+import (
+	"bufio"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"github.com/Graylog2/go-gelf/gelf"
+	"github.com/labstack/echo/v4"
+	{{.LoggerPackageImport}}
+	"net"
+	"net/http"
+)
+
+/*
+responseInterceptor
+Custom response writer that implements writer. This is for response interception because we want to capture echo.Map upon response.
+Once response is written, it's details are not reachable, therefore we have to intercept it before it is sent to the client.
+We intercept the response by implementing our own Write method which captures the copy of response body and saves it for later use..
+After that data is passed to http writer.
+*/
+type responseInterceptor struct {
+	http.ResponseWriter               // Inherit default response writer
+	body                *bytes.Buffer // Buffer to store response body
+	status              int           // Store response status code
+}
+
+func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		fieldsMap := map[string]interface{}{
+			"| method":     c.Request().Method,
+			"| uri":        c.Request().URL.Path,
+			"| query":      c.Request().URL.RawQuery,
+			"| user_agent": c.Request().UserAgent(),
+			"| remote_ip":  c.RealIP(),
+		}
+
+		writer := newResponseInterceptor(c.Response().Writer)
+
+		// Replace the original writer
+		c.Response().Writer = writer
+
+		// Call the next handler
+		err := next(c)
+
+		fieldsMap["| status"] = c.Response().Status
+
+		if err != nil {
+			fieldsMap["error"] = err.Error()
+			fieldsMap["| status"] = http.StatusInternalServerError
+			{{.LoggerPackage}}.Logger.LogError().Fields(fieldsMap).Msg("Response")
+		} else {
+			if c.Response().Status >= 400 {
+				{{.LoggerPackage}}.Logger.LogError().Fields(fieldsMap).Msg("Response")
+			} else {
+				{{.LoggerPackage}}.Logger.LogInfo().Fields(fieldsMap).Msg("Response")
+			}
+		}
+
+		// send log to graylog
+		if {{.LoggerPackage}}.Logger.GelfWriter != nil {
+
+			// message just as in console
+			graylogMessage := &gelf.Message{
+				Host:  c.Request().Host,
+				Short: c.Request().Host,
+				Extra: map[string]interface{}{
+					"method":     c.Request().Method,
+					"uri":        c.Request().URL.Path,
+					"query":      c.Request().URL.RawQuery,
+					"status":     c.Response().Status,
+					"user_agent": c.Request().UserAgent(),
+					"remote_ip":  c.RealIP(),
+				},
+			}
+
+			// add user data to log
+			userId, ok := c.Get("userId").(uint)
+			if ok {
+				graylogMessage.Extra["userId"] = userId
+			}
+
+			// read response details
+			var additionalData map[string]interface{}
+			var message string
+			// response details can be passed in form of a json or just a string message (or empty)
+			if len(writer.body.Bytes()) > 0 {
+				unmarshalErr := json.Unmarshal(writer.body.Bytes(), &additionalData)
+				if unmarshalErr != nil {
+					message = string(bytes.TrimSpace(writer.body.Bytes()))
+				}
+			}
+
+			// add response details to log if it exists or populate short message if custom short message had been sent (there are cases where error was sent as key value pair)
+			if additionalData != nil {
+				if _, exists := additionalData["message"]; exists {
+					graylogMessage.Extra["short_message"] = additionalData["message"]
+				} else if _, exists = additionalData["error"]; exists {
+					graylogMessage.Extra["short_message"] = additionalData["error"]
+				}
+				graylogMessage.Extra["details"] = additionalData
+			} else {
+				if message != "" {
+					graylogMessage.Extra["short_message"] = message
+				}
+			}
+
+			// determine level of log
+			if err != nil {
+				graylogMessage.Extra["status"] = http.StatusInternalServerError
+				graylogMessage.Extra["short_message"] = err.Error()
+				graylogMessage.Extra["error_stack"] = fmt.Sprintf("%+v", err)
+				graylogMessage.Level = gelf.LOG_ERR
+			} else {
+				if c.Response().Status >= 400 {
+					graylogMessage.Level = gelf.LOG_ERR
+
+					ctxErr := c.Get("error")
+					if ctxErr != nil {
+						err, ok = ctxErr.(error)
+						if ok {
+							graylogMessage.Extra["short_message"] = err.Error()
+							graylogMessage.Extra["error_stack"] = fmt.Sprintf("%+v", err)
+						}
+					}
+				} else {
+					graylogMessage.Level = gelf.LOG_INFO
+				}
+			}
+
+			// send log
+			graylogErr := logger.Logger.GelfWriter.WriteMessage(graylogMessage)
+			if graylogErr != nil {
+				{{.LoggerPackage}}.Logger.LogWarn().Msg("Failed to send graylog message: " + graylogErr.Error())
+			}
+		}
+
+		return err
+	}
+}
+
+func newResponseInterceptor(writer http.ResponseWriter) *responseInterceptor {
+	return &responseInterceptor{
+		ResponseWriter: writer,
+		body:           new(bytes.Buffer),
+	}
+}
+
+func (r *responseInterceptor) Write(b []byte) (int, error) {
+	r.body.Write(b)                  // Capture response body
+	return r.ResponseWriter.Write(b) // Write response to client
+}
+
+func (r *responseInterceptor) Header() http.Header {
+	return r.ResponseWriter.Header()
+}
+
+func (r *responseInterceptor) WriteHeader(statusCode int) {
+	r.status = statusCode                    // Capture the status code
+	r.ResponseWriter.WriteHeader(statusCode) // Send the status to the client
+}
+
+func (r *responseInterceptor) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("websocket upgrade failed: underlying ResponseWriter does not support hijacking")
+	}
+	return hijacker.Hijack()
+}
+
+func (r *responseInterceptor) Flush() {
+	if flusher, ok := r.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}

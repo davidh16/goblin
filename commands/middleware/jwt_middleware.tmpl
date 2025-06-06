@@ -1,0 +1,43 @@
+package {{.MiddlewaresPackage}}
+
+import (
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+)
+
+type JwtMiddleware echojwt.Config
+
+func NewJwtMiddleware() *echojwt.Config {
+	return &echojwt.Config{}
+}
+
+func (j *JwtMiddleware) SetNewClaimsFunc(newClaimsFunc func(c echo.Context) jwt.Claims) *JwtMiddleware {
+	j.NewClaimsFunc = newClaimsFunc
+	return j
+}
+
+func (j *JwtMiddleware) SetSigningKey(signingKey interface{}) *JwtMiddleware {
+	j.SigningKey = signingKey
+	return j
+}
+
+func (j *JwtMiddleware) SetSigningMethod(signingMethod string) *JwtMiddleware {
+	j.SigningMethod = signingMethod
+	return j
+}
+
+func (j *JwtMiddleware) SetErrorHandler(errorHandler func(c echo.Context, err error) error) *JwtMiddleware {
+	j.ErrorHandler = errorHandler
+	return j
+}
+
+func (j *JwtMiddleware) SetTokenLookupFuncs(validatorExtractors []middleware.ValuesExtractor) *JwtMiddleware {
+	j.TokenLookupFuncs = validatorExtractors
+	return j
+}
+
+func (j *JwtMiddleware) Build() echojwt.Config {
+	return (echojwt.Config)(*j)
+}

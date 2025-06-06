@@ -1,0 +1,35 @@
+package {{.MiddlewaresPackage}}
+
+import (
+	"fmt"
+	"os"
+	"regexp"
+	"strings"
+)
+
+func AllowOrigin(origin string) (bool, error) {
+	// basic origins defined in file
+	allowedOrigins := strings.Split(os.Getenv("ALLOW_ORIGINS"), ",")
+	for _, allowedOrigin := range allowedOrigins {
+		if origin == allowedOrigin {
+			return true, nil
+		}
+	}
+
+	// regex if domain starts with some address defined in ALLOW_ORIGINS_WILDCARDS env variable
+	allowedOriginsWildcards := strings.Split(os.Getenv("ALLOW_ORIGINS_WILDCARDS"), ",")
+	for _, allowedOriginWildcard := range allowedOriginsWildcards {
+		// Modify regex to match subdomains
+		// This regex matches the root domain or any subdomain of it
+		match, err := regexp.MatchString(fmt.Sprintf(`^https?://([a-zA-Z0-9-]+\.)*%s$`, regexp.QuoteMeta(allowedOriginWildcard)), origin)
+		if err != nil {
+			return false, err
+		}
+		if match {
+			return true, nil
+		}
+
+	}
+
+	return false, nil
+}

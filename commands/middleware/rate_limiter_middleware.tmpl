@@ -1,0 +1,62 @@
+package {{.MiddlewaresPackage}}
+
+import (
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	"net/http"
+	"time"
+)
+
+type RateLimiter middleware.RateLimiterConfig
+
+func NewRateLimiter() *RateLimiter {
+	return &RateLimiter{}
+}
+
+func (r *RateLimiter) SetSkipper(skipper func(ctx echo.Context) bool) *RateLimiter {
+	r.Skipper = skipper
+	return r
+}
+
+func (r *RateLimiter) SetStore(store middleware.RateLimiterStore) *RateLimiter {
+	r.Store = store
+	return r
+}
+
+func (r *RateLimiter) SetIdentifierExtractor(extractor func(context echo.Context) (string, error)) *RateLimiter {
+	r.IdentifierExtractor = extractor
+	return r
+}
+
+func (r *RateLimiter) SetErrorHandler(errorHandler func(context echo.Context, err error) error) *RateLimiter {
+	r.ErrorHandler = errorHandler
+	return r
+}
+
+func (r *RateLimiter) SetDenyHandler(denyHandler func(context echo.Context, identifier string, err error) error) *RateLimiter {
+	r.DenyHandler = denyHandler
+	return r
+}
+
+func (r *RateLimiter) Build() middleware.RateLimiterConfig {
+	return (middleware.RateLimiterConfig)(*r)
+}
+
+func NewRateLimiterConfig() middleware.RateLimiterConfig {
+	return NewRateLimiter().
+		SetSkipper(middleware.DefaultSkipper).
+		SetIdentifierExtractor(func(context echo.Context) (string, error) {
+			id := context.RealIP()
+			return id, nil
+		}).
+		SetStore(middleware.NewRateLimiterMemoryStoreWithConfig(
+			middleware.RateLimiterMemoryStoreConfig{Rate: 100, Burst: 200, ExpiresIn: 5 * time.Minute},
+		)).
+		SetErrorHandler(func(context echo.Context, err error) error {
+			return context.JSON(http.StatusForbidden, nil)
+		}).
+		SetDenyHandler(func(context echo.Context, identifier string, err error) error {
+			return context.JSON(http.StatusTooManyRequests, nil)
+		}).
+		Build()
+}
