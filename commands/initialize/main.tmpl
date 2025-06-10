@@ -1,0 +1,53 @@
+package main
+
+import (
+	"fmt"
+	"{{.RouterPackageImport}}"
+	"os"
+	"os/signal"
+	"syscall"
+	"github.com/joho/godotenv"
+	{{if .ImplementCentralRepository}}"{{.RepositoriesPackageImport}}"{{end}}
+	{{if .ImplementCentralRepository}}"{{.DatabasesPackageImport}}"{{end}}
+	{{if .ImplementCentralService}}"{{.ServicesPackageImport}}"{{end}}
+	"{{.ControllersPackageImport}}"
+	"{{.LoggerPackageImport}}"
+)
+
+func main() {
+	err := godotenv.Load()
+	if err != nil {
+	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogFatal().Msg("Error loading .env file") {{ else }} fmt.Println("Error loading .env file") {{ end }}
+	}
+
+	{{if .ImplementCentralRepository}}
+	db, err := {{.DatabasesPackage}}.ConnectToPostgres()
+	if err != nil{
+        {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogFatal().Msg(err.Error()) {{ else }} fmt.Println(err.Error()) {{ end }}
+        return
+	}
+	centralRepo := {{.RepositoriesPackage}}.NewCentralRepo(db){{end}}
+	{{if .ImplementCentralService}}
+	centralService := {{.ServicesPackage}}.NewCentralService({{if .ImplementCentralRepository}}centralRepo{{end}}){{end}}
+
+	centralController := {{.ControllersPackage}}.NewCentralController({{if .ImplementCentralService}}centralService{{end}})
+
+	appRouter := {{.RouterPackage}}.InitRouter(centralController)
+
+	serverAddress := fmt.Sprintf("%s:%s", os.Getenv("SERVER_BIND_ADDRESS"), os.Getenv("SERVER_BIND_PORT"))
+	go func() {
+	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg(appRouter.Start(serverAddress).Error()) {{ else }} fmt.Println(router.Start(serverAddress).Error()) {{ end }}
+	}()
+
+	// Graceful shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg("Shutting down server...") {{ else }} fmt.Println("Shutting down server...")
+	{{.LoggerPackage}}..Logger.Close()  {{ end }}
+	if err := appRouter.Shutdown(nil); err != nil {
+	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogFatal().Msg(err.Error()) {{ else }} log.Fatal(err.Error()) {{ end }}
+	}
+	{{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg("Server stopped") {{ else }} fmt.Println("Server stopped") {{ end }}
+}

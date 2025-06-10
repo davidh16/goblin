@@ -108,7 +108,7 @@ func CentralControllerFlagHandler() {
 	fmt.Println("✅ Central controller generated successfully.")
 }
 
-func GenerateCentralController(controllerData *controller_utils.ControllerData) error {
+func GenerateCentralController() error {
 	centralControllerPath := path.Join(cli_config.CliConfig.ControllersFolderPath, "central_controller.go")
 
 	alreadyExists := utils.FileExists(centralControllerPath)

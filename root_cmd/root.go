@@ -4,6 +4,7 @@ import (
 	"goblin/commands/config"
 	"goblin/commands/controller"
 	"goblin/commands/database"
+	"goblin/commands/initialize"
 	"goblin/commands/logger"
 	"goblin/commands/middleware"
 	"goblin/commands/migration"
@@ -76,4 +77,6 @@ func init() {
 	rootCmd.AddCommand(router.RouterCmd)
 
 	rootCmd.AddCommand(middleware.MiddlewareCmd)
+
+	rootCmd.AddCommand(initialize.InitializeCmd)
 }

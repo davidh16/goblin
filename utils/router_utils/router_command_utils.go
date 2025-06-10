@@ -50,6 +50,8 @@ func GenerateRouter(routerData *RouterData) error {
 		AllowOriginMiddleware    bool
 		RateLimiterMiddleware    bool
 		LoggingMiddleware        bool
+		ControllersPackageImport string
+		ControllersPackage       string
 	}{
 		RouterPackage:            strings.Split(cli_config.CliConfig.RouterFolderPath, "/")[len(strings.Split(cli_config.CliConfig.RouterFolderPath, "/"))-1],
 		ImplementMiddlewares:     routerData.ImplementMiddlewares,
@@ -59,6 +61,8 @@ func GenerateRouter(routerData *RouterData) error {
 		AllowOriginMiddleware:    routerData.AllowOriginMiddleware,
 		RateLimiterMiddleware:    routerData.RateLimiterMiddleware,
 		LoggingMiddleware:        routerData.LoggingMiddleware,
+		ControllersPackageImport: path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ControllersFolderPath),
+		ControllersPackage:       strings.Split(cli_config.CliConfig.ControllersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ControllersFolderPath, "/"))-1],
 	}
 
 	err = tmpl.Execute(f, templateData)

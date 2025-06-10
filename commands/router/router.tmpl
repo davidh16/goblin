@@ -6,9 +6,10 @@ import (
 	{{if .ImplementMiddlewares}}"{{.MiddlewaresPackageImport}}"{{end}}
 	"net/http"
 	"time"
+	"{{.ControllersPackageImport}}"
 )
 
-func InitRouter() *echo.Echo {
+func InitRouter(centralController *{{.ControllersPackage}}.CentralController) *echo.Echo {
 	e := echo.New()
 
 	e.Binder = new(CustomBinder)

@@ -150,7 +150,7 @@ func controllerCmdHandler() {
 	}
 
 	if !controllerData.CentralControllerExists {
-		err = central_controller.GenerateCentralController(controllerData)
+		err = central_controller.GenerateCentralController()
 		if err != nil {
 			utils.HandleError(err)
 		}

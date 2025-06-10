@@ -150,11 +150,12 @@ func databaseCmdHandler() {
 func ImplementRedisAndOtherGormDb() error {
 	var selectedDatabaseNames []string
 	var preselectedOptions []string
-	var redisImplemented bool
+	//var redisImplemented bool
 	var gormDatabaseImplemented bool
 
 	for {
 		preselectedOptions = []string{database_utils.DatabaseOptionNamesMap[database_utils.Redis]}
+		preselectedOptions = utils.Keys(database_utils.DatabaseNameOptionsMap)
 		selectDatabasesPrompt := &survey.MultiSelect{
 			Message: "Which databases do you want to use?",
 			Options: database_utils.GetSortedDatabaseOptions(),
@@ -169,9 +170,9 @@ func ImplementRedisAndOtherGormDb() error {
 		var existingDatabaseInstances []string
 		for _, databaseName := range selectedDatabaseNames {
 
-			if databaseName == database_utils.DatabaseOptionNamesMap[database_utils.Redis] {
-				redisImplemented = true
-			}
+			//if databaseName == database_utils.DatabaseOptionNamesMap[database_utils.Redis] {
+			//	redisImplemented = true
+			//}
 
 			if databaseName == database_utils.DatabaseOptionNamesMap[database_utils.PostgresSQL] || databaseName == database_utils.DatabaseOptionNamesMap[database_utils.MariaDB] {
 				gormDatabaseImplemented = true
@@ -182,10 +183,10 @@ func ImplementRedisAndOtherGormDb() error {
 			}
 		}
 
-		if !redisImplemented {
-			fmt.Println("🔴 Redis must be implemented")
-			continue
-		}
+		//if !redisImplemented {
+		//	fmt.Println("🔴 Redis must be implemented")
+		//	continue
+		//}
 
 		if !gormDatabaseImplemented {
 			fmt.Println("🔴 At least one persistent database must be implemented")
