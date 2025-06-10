@@ -148,7 +148,7 @@ func initCmdHandler() {
 		utils.HandleError(err)
 	}
 
-	f, err := os.Create(path.Join(workingDirectory, "main1.go"))
+	f, err := os.Create(path.Join(workingDirectory, "main.go"))
 	if err != nil {
 		utils.HandleError(err)
 	}
