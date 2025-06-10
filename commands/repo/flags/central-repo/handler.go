@@ -79,10 +79,10 @@ func GenerateCentralRepo() {
 			if !confirm {
 				return
 			}
-			generateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
+			GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
 		}
 	} else {
-		generateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
+		GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
 	}
 
 	tmpl, err := template.ParseFiles(CentralRepoTemplatePath)
@@ -130,7 +130,7 @@ func GenerateCentralRepo() {
 	fmt.Println("✅ Central repository generated successfully.")
 }
 
-func generateUnitOfWorkRepoUtil(unitOFWorkRepoPath string) {
+func GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath string) {
 	tmpl, err := template.ParseFiles(UnitOfWorkRepoTemplatePath)
 	if err != nil {
 		utils.HandleError(err)

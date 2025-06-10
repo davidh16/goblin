@@ -4,8 +4,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
 	central_controller "github.com/davidh16/goblin/commands/controller/flags/central-controller"
-	central_repo "github.com/davidh16/goblin/commands/repo/flags/central-repo"
-	central_service "github.com/davidh16/goblin/commands/service/flags/central-service"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/database_utils"
 	"github.com/davidh16/goblin/utils/initialize_utils"
@@ -114,12 +112,23 @@ func initCmdHandler() {
 		}
 	}
 
-	if initData.ImplementCentralRepository {
-		central_repo.GenerateCentralRepo()
+	err = initialize_utils.ExecuteCentralController(initData.ImplementCentralService)
+	if err != nil {
+		utils.HandleError(err)
 	}
 
 	if initData.ImplementCentralService {
-		central_service.GenerateCentralService()
+		err = initialize_utils.ExecuteCentralService(initData.ImplementCentralRepository)
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
+	if initData.ImplementCentralRepository {
+		err = initialize_utils.ExecuteCentralRepo()
+		if err != nil {
+			utils.HandleError(err)
+		}
 	}
 
 	err = central_controller.GenerateCentralController()

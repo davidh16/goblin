@@ -4,13 +4,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/cli_config"
+	central_repo "github.com/davidh16/goblin/commands/repo/flags/central-repo"
 	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/controller_utils"
 	"github.com/davidh16/goblin/utils/database_utils"
 	"github.com/davidh16/goblin/utils/middleware_utils"
+	"github.com/davidh16/goblin/utils/repo_utils"
 	"github.com/davidh16/goblin/utils/router_utils"
+	"github.com/davidh16/goblin/utils/service_utils"
 	"github.com/samber/lo"
 	"os"
 	"path"
+	"strings"
+	"text/template"
 )
 
 type InitData struct {
@@ -112,4 +119,143 @@ func ExecuteRouter(routerData *router_utils.RouterData, selectedMiddlewares []st
 
 	fmt.Println("✅ Router generated successfully.")
 	return nil
+}
+
+func ExecuteCentralService(implementRepo bool) error {
+	centralServicePath := path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go")
+
+	funcMap := template.FuncMap{
+		"GetProjectName": utils.GetProjectName,
+	}
+
+	tmpl, err := template.New(service_utils.CentralServiceTemplateName).Funcs(funcMap).ParseFiles(service_utils.CentralServiceTemplatePath)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	f, err := os.Create(centralServicePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = os.Mkdir(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
+			if err != nil {
+				return err
+			}
+			f, err = os.Create(centralServicePath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	defer f.Close()
+
+	templateData := struct {
+		CentralRepoExists bool
+		RepoPackage       string
+		RepoPackageImport string
+		ServicePackage    string
+	}{
+		RepoPackage:       strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/"))-1],
+		RepoPackageImport: cli_config.CliConfig.RepositoriesFolderPath,
+		ServicePackage:    strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1],
+		CentralRepoExists: implementRepo,
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		return err
+	}
+
+	err = service_utils.AddCentralServiceToCentralControllerConstructor()
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	fmt.Println("✅ Central service generated successfully.")
+	return nil
+}
+
+func ExecuteCentralRepo() error {
+	centralRepoPath := path.Join(cli_config.CliConfig.RepositoriesFolderPath, "central_repo.go")
+
+	unitOFWorkRepoPath := path.Join(cli_config.CliConfig.RepositoriesFolderPath, "unit_of_work.go")
+	central_repo.GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
+
+	tmpl, err := template.ParseFiles(central_repo.CentralRepoTemplatePath)
+	if err != nil {
+		utils.HandleError(err)
+	}
+
+	err = os.Mkdir(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(centralRepoPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	templateData := struct {
+		RepoPackage string
+	}{
+		RepoPackage: strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.RepositoriesFolderPath, "/"))-1],
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		return err
+	}
+
+	err = repo_utils.AddCentralRepoToCentralServiceConstructor()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("✅ Central repository generated successfully.")
+	return nil
+}
+
+func ExecuteCentralController(implementCentralService bool) error {
+
+	centralControllerPath := path.Join(cli_config.CliConfig.ControllersFolderPath, "central_controller.go")
+	err := os.MkdirAll(cli_config.CliConfig.ControllersFolderPath, 0755) // 0755 = rwxr-xr-x
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(centralControllerPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	funcMap := template.FuncMap{
+		"GetProjectName": utils.GetProjectName,
+	}
+
+	tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFiles(controller_utils.CentralControllerTemplatePath)
+	if err != nil {
+		return err
+	}
+
+	templateData := struct {
+		Package              string
+		CentralServiceExists bool
+		ServicePackage       string
+		ServicePackageImport string
+	}{
+		Package:              strings.Split(cli_config.CliConfig.ControllersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ControllersFolderPath, "/"))-1],
+		ServicePackageImport: cli_config.CliConfig.ServicesFolderPath,
+		ServicePackage:       strings.Split(cli_config.CliConfig.ServicesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ServicesFolderPath, "/"))-1],
+		CentralServiceExists: implementCentralService,
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
+		return err
+	}
+
+	return nil
+
 }
