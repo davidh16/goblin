@@ -1,7 +1,7 @@
 package model_utils
 
 import (
-	"goblin/utils"
+	"github.com/davidh16/goblin/utils"
 	"reflect"
 	"time"
 )

@@ -3,10 +3,10 @@ package migration
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/migration_utils"
 	"github.com/spf13/cobra"
-	"goblin/cli_config"
-	"goblin/utils"
-	"goblin/utils/migration_utils"
 	"path"
 	"time"
 )

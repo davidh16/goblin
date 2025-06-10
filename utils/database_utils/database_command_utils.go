@@ -3,8 +3,8 @@ package database_utils
 import (
 	"errors"
 	"fmt"
-	"goblin/cli_config"
-	"goblin/utils"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
 	"os"
 	"path"
 	"strings"

@@ -3,13 +3,13 @@ package service
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/cli_config"
+	central_service "github.com/davidh16/goblin/commands/service/flags/central-service"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/controller_utils"
+	"github.com/davidh16/goblin/utils/repo_utils"
+	"github.com/davidh16/goblin/utils/service_utils"
 	"github.com/spf13/cobra"
-	"goblin/cli_config"
-	central_service "goblin/commands/service/flags/central-service"
-	"goblin/utils"
-	"goblin/utils/controller_utils"
-	"goblin/utils/repo_utils"
-	"goblin/utils/service_utils"
 	"path"
 )
 

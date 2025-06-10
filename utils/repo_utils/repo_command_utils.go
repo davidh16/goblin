@@ -2,14 +2,14 @@ package repo_utils
 
 import (
 	"fmt"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/model_utils"
 	"github.com/jinzhu/inflection"
 	"go/ast"
 	"go/parser"
 	"go/printer"
 	"go/token"
-	"goblin/cli_config"
-	"goblin/utils"
-	"goblin/utils/model_utils"
 	"io/fs"
 	"os"
 	"os/exec"

@@ -3,10 +3,10 @@ package logger
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/logger_utils"
 	"github.com/spf13/cobra"
-	"goblin/cli_config"
-	"goblin/utils"
-	"goblin/utils/logger_utils"
 	"os"
 	"path"
 )

@@ -3,12 +3,12 @@ package controller
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/cli_config"
+	central_controller "github.com/davidh16/goblin/commands/controller/flags/central-controller"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/controller_utils"
+	"github.com/davidh16/goblin/utils/service_utils"
 	"github.com/spf13/cobra"
-	"goblin/cli_config"
-	central_controller "goblin/commands/controller/flags/central-controller"
-	"goblin/utils"
-	"goblin/utils/controller_utils"
-	"goblin/utils/service_utils"
 	"path"
 )
 

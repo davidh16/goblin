@@ -1,8 +1,8 @@
 package migration_utils
 
 import (
-	"goblin/cli_config"
-	"goblin/utils"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
 	"os"
 	"path"
 	"text/template"

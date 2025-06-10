@@ -3,9 +3,9 @@ package model_utils
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
-	"goblin/cli_config"
-	"goblin/utils"
-	"goblin/utils/migration_utils"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/migration_utils"
 	"os"
 	"path"
 	"reflect"

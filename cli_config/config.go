@@ -2,7 +2,7 @@ package cli_config
 
 import (
 	"fmt"
-	"goblin/utils"
+	"github.com/davidh16/goblin/utils"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"

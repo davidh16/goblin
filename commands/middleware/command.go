@@ -3,9 +3,9 @@ package middleware
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/middleware_utils"
 	"github.com/spf13/cobra"
-	"goblin/utils"
-	"goblin/utils/middleware_utils"
 	"os"
 )
 

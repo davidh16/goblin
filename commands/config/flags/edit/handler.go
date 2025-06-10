@@ -3,9 +3,9 @@ package edit
 import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/utils"
 	"github.com/spf13/cobra"
-	"goblin/cli_config"
-	"goblin/utils"
 )
 
 var EditConfigCmd = &cobra.Command{

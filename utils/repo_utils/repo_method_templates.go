@@ -1,10 +1,10 @@
 package repo_utils
 
 import (
+	"github.com/davidh16/goblin/utils"
 	"github.com/jinzhu/inflection"
 	"go/ast"
 	"go/token"
-	"goblin/utils"
 )
 
 //////// bodies

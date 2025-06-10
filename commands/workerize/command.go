@@ -2,14 +2,14 @@ package workerize
 
 import (
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/davidh16/goblin/commands/database"
+	central_service "github.com/davidh16/goblin/commands/service/flags/central-service"
+	"github.com/davidh16/goblin/commands/workerize/flags/job"
+	"github.com/davidh16/goblin/utils"
+	"github.com/davidh16/goblin/utils/database_utils"
+	"github.com/davidh16/goblin/utils/logger_utils"
+	"github.com/davidh16/goblin/utils/workerize_utils"
 	"github.com/spf13/cobra"
-	"goblin/commands/database"
-	central_service "goblin/commands/service/flags/central-service"
-	"goblin/commands/workerize/flags/job"
-	"goblin/utils"
-	"goblin/utils/database_utils"
-	"goblin/utils/logger_utils"
-	"goblin/utils/workerize_utils"
 )
 
 var CustomJobFlag bool

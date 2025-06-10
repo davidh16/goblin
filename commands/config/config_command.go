@@ -1,10 +1,10 @@
 package config
 
 import (
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/commands/config/flags/edit"
+	"github.com/davidh16/goblin/utils"
 	"github.com/spf13/cobra"
-	"goblin/cli_config"
-	"goblin/commands/config/flags/edit"
-	"goblin/utils"
 )
 
 var EditCliConfigFlag bool

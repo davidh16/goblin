@@ -4,9 +4,9 @@ Copyright © 2025 NAME HERE <EMAIL ADDRESS>
 package main
 
 import (
-	"goblin/cli_config"
-	"goblin/root_cmd"
-	"goblin/utils"
+	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/root_cmd"
+	"github.com/davidh16/goblin/utils"
 )
 
 func init() {
