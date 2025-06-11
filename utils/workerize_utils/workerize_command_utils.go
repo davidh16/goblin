@@ -7,6 +7,7 @@ import (
 	"github.com/davidh16/goblin/cli_config"
 	"github.com/davidh16/goblin/commands/database"
 	central_service "github.com/davidh16/goblin/commands/service/flags/central-service"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/database_utils"
 	"go/ast"
@@ -123,7 +124,7 @@ func ListImplementedDatabases() ([]string, error) {
 func ImplementJobsLogic(data *WorkerizeData) error {
 	if data.JobsOverwrite {
 
-		tmpl, err := template.ParseFiles(JobTemplateFilePath)
+		tmpl, err := template.ParseFS(templates.Files, JobTemplateFilePath)
 		if err != nil {
 			return err
 		}
@@ -162,7 +163,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 	}
 
 	if data.JobsManagerOverwrite {
-		tmpl, err := template.ParseFiles(JobsManagerTemplateFilePath)
+		tmpl, err := template.ParseFS(templates.Files, JobsManagerTemplateFilePath)
 		if err != nil {
 			utils.HandleError(err)
 		}
@@ -205,7 +206,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 func ImplementWorkersLogic(data *WorkerizeData) error {
 	if data.WorkerPoolOverwrite {
 
-		tmpl, err := template.ParseFiles(WorkerPoolTemplateFilePath)
+		tmpl, err := template.ParseFS(templates.Files, WorkerPoolTemplateFilePath)
 		if err != nil {
 			return err
 		}
@@ -246,7 +247,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 	}
 
 	if data.OrchestratorOverwrite {
-		tmpl, err := template.ParseFiles(OrchestratorTemplateFilePath)
+		tmpl, err := template.ParseFS(templates.Files, OrchestratorTemplateFilePath)
 		if err != nil {
 			utils.HandleError(err)
 		}
@@ -431,7 +432,7 @@ func WorkerizeCmdHandlerCopy() {
 }
 
 func GenerateCustomJobMetadataFile(customJobData *CustomJobData) error {
-	tmpl, err := template.ParseFiles(CustomJobMetadataTemplateFilePath)
+	tmpl, err := template.ParseFS(templates.Files, CustomJobMetadataTemplateFilePath)
 	if err != nil {
 		return err
 	}
@@ -606,7 +607,7 @@ func GenerateCustomWorkerPool(customJobData *CustomJobData) error {
 		"GenerateImplementations":    GenerateImplementations,
 	}
 
-	tmpl, err := template.New(CustomWorkerPoolTemplateName).Funcs(funcMap).ParseFiles(CustomWorkerPoolTemplateFilePath)
+	tmpl, err := template.New(CustomWorkerPoolTemplateName).Funcs(funcMap).ParseFS(templates.Files, CustomWorkerPoolTemplateFilePath)
 	if err != nil {
 		return err
 	}

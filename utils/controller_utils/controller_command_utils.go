@@ -5,6 +5,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
 	central_service "github.com/davidh16/goblin/commands/service/flags/central-service"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/repo_utils"
 	"github.com/davidh16/goblin/utils/service_utils"
@@ -506,7 +507,7 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 // CreateController generates a new controller Go file from a predefined template.
 // It fills in the controller entity and package data into the template and writes it to the destination path.
 func CreateController(controllerData *ControllerData) error {
-	tmpl, err := template.ParseFiles(ControllerTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, ControllerTemplatePath)
 	if err != nil {
 		return err
 	}

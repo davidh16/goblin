@@ -2,6 +2,7 @@ package logger_utils
 
 import (
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"os"
 	"path"
@@ -23,7 +24,7 @@ func GenerateLogger() error {
 		}
 	}
 
-	tmpl, err := template.ParseFiles(LoggerTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, LoggerTemplatePath)
 	if err != nil {
 		return err
 	}

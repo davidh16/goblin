@@ -3,6 +3,7 @@ package repo_utils
 import (
 	"fmt"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/model_utils"
 	"github.com/jinzhu/inflection"
@@ -480,7 +481,7 @@ func GenerateSortedRepoMethodNames(modelEntity string) []string {
 // CreateRepo generates a new repository source file using a predefined template (repo.tmpl).
 // It fills in the repo entity name and package path and writes the resulting code to disk.
 func CreateRepo(repoData *RepoData) error {
-	tmpl, err := template.ParseFiles(RepoTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, RepoTemplatePath)
 	if err != nil {
 		return err
 	}

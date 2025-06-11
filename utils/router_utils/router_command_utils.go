@@ -2,6 +2,7 @@ package router_utils
 
 import (
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"os"
 	"path"
@@ -30,7 +31,7 @@ func GenerateRouter(routerData *RouterData) error {
 		}
 	}
 
-	tmpl, err := template.ParseFiles(RouterTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, RouterTemplatePath)
 	if err != nil {
 		return err
 	}
@@ -70,7 +71,7 @@ func GenerateRouter(routerData *RouterData) error {
 		return err
 	}
 
-	tmpl, err = template.ParseFiles(CustomBinderTemplatePath)
+	tmpl, err = template.ParseFS(templates.Files, CustomBinderTemplatePath)
 	if err != nil {
 		return err
 	}

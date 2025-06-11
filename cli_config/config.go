@@ -2,6 +2,7 @@ package cli_config
 
 import (
 	"fmt"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -52,7 +53,7 @@ func CreateConfigFile() error {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New("cli_config.tmpl").Funcs(funcMap).ParseFiles("templates/cli_config.tmpl")
+	tmpl, err := template.New("cli_config.tmpl").Funcs(funcMap).ParseFS(templates.Files, "templates/cli_config.tmpl")
 	if err != nil {
 		return err
 	}

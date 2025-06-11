@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"os"
 	"path"
@@ -85,7 +86,7 @@ type DatabaseData struct {
 
 func InitializeDatabaseInstance(database DatabaseData) error {
 
-	tmpl, err := template.ParseFiles(DatabaseOptionTemplatePaths[database.DatabaseType])
+	tmpl, err := template.ParseFS(templates.Files, DatabaseOptionTemplatePaths[database.DatabaseType])
 	if err != nil {
 		utils.HandleError(err, "Error parsing model template")
 	}
@@ -139,7 +140,7 @@ func generatePaginationFile() error {
 	}
 	defer file.Close()
 
-	tmpl, err := template.ParseFiles(PaginationTemplateFilePath)
+	tmpl, err := template.ParseFS(templates.Files, PaginationTemplateFilePath)
 	if err != nil {
 		utils.HandleError(err, "Error parsing model template")
 	}

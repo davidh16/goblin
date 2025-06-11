@@ -3,6 +3,7 @@ package initialize
 import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/database_utils"
 	"github.com/davidh16/goblin/utils/initialize_utils"
@@ -137,7 +138,7 @@ func initCmdHandler() {
 	}
 
 	// execute main
-	tmpl, err := template.ParseFiles(initialize_utils.MainTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, initialize_utils.MainTemplatePath)
 	if err != nil {
 		utils.HandleError(err, "Error parsing template")
 	}

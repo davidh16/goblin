@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
 	central_repo "github.com/davidh16/goblin/commands/repo/flags/central-repo"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/controller_utils"
 	"github.com/davidh16/goblin/utils/database_utils"
@@ -128,7 +129,7 @@ func ExecuteCentralService(implementRepo bool) error {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New(service_utils.CentralServiceTemplateName).Funcs(funcMap).ParseFiles(service_utils.CentralServiceTemplatePath)
+	tmpl, err := template.New(service_utils.CentralServiceTemplateName).Funcs(funcMap).ParseFS(templates.Files, service_utils.CentralServiceTemplatePath)
 	if err != nil {
 		utils.HandleError(err)
 	}
@@ -180,7 +181,7 @@ func ExecuteCentralRepo() error {
 	unitOFWorkRepoPath := path.Join(cli_config.CliConfig.RepositoriesFolderPath, "unit_of_work.go")
 	central_repo.GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
 
-	tmpl, err := template.ParseFiles(central_repo.CentralRepoTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, central_repo.CentralRepoTemplatePath)
 	if err != nil {
 		utils.HandleError(err)
 	}
@@ -234,7 +235,7 @@ func ExecuteCentralController(implementCentralService bool) error {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFiles(controller_utils.CentralControllerTemplatePath)
+	tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFS(templates.Files, controller_utils.CentralControllerTemplatePath)
 	if err != nil {
 		return err
 	}

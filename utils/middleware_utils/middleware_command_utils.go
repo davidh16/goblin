@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/logger_utils"
 	"go/ast"
@@ -128,7 +129,7 @@ func GenerateMiddlewares(middlewareOptions []string) error {
 			}
 		}
 
-		tmpl, err := template.ParseFiles(MiddlewareOptionTemplatePathMap[option])
+		tmpl, err := template.ParseFS(templates.Files, MiddlewareOptionTemplatePathMap[option])
 		if err != nil {
 			return err
 		}
@@ -191,7 +192,7 @@ func generateAuthJwtFile() error {
 		}
 	}
 
-	tmpl, err := template.ParseFiles(AuthJwtTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, AuthJwtTemplatePath)
 	if err != nil {
 		return err
 	}

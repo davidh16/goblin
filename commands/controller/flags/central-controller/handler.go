@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
 	central_service "github.com/davidh16/goblin/commands/service/flags/central-service"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/controller_utils"
 	"os"
@@ -66,7 +67,7 @@ func CentralControllerFlagHandler() {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFiles(controller_utils.CentralControllerTemplatePath)
+	tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFS(templates.Files, controller_utils.CentralControllerTemplatePath)
 	if err != nil {
 		utils.HandleError(err)
 	}
@@ -134,7 +135,7 @@ func GenerateCentralController() error {
 			"GetProjectName": utils.GetProjectName,
 		}
 
-		tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFiles(controller_utils.CentralControllerTemplatePath)
+		tmpl, err := template.New(controller_utils.CentralControllerTemplateName).Funcs(funcMap).ParseFS(templates.Files, controller_utils.CentralControllerTemplatePath)
 		if err != nil {
 			return err
 		}

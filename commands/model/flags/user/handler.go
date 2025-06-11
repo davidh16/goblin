@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/model_utils"
 	"github.com/spf13/cobra"
@@ -46,7 +47,7 @@ func GenerateUserModel() {
 	}
 
 	// Write the model to file
-	tmpl, err := template.ParseFiles(model_utils.UserModelTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, model_utils.UserModelTemplatePath)
 	if err != nil {
 		panic(err)
 	}

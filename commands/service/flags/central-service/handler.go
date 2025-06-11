@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
 	central_repo "github.com/davidh16/goblin/commands/repo/flags/central-repo"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/service_utils"
 	"github.com/spf13/cobra"
@@ -73,7 +74,7 @@ func GenerateCentralService() {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New(service_utils.CentralServiceTemplateName).Funcs(funcMap).ParseFiles(service_utils.CentralServiceTemplatePath)
+	tmpl, err := template.New(service_utils.CentralServiceTemplateName).Funcs(funcMap).ParseFS(templates.Files, service_utils.CentralServiceTemplatePath)
 	if err != nil {
 		utils.HandleError(err)
 	}

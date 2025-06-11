@@ -2,6 +2,7 @@ package migration_utils
 
 import (
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"os"
 	"path"
@@ -54,7 +55,7 @@ func GenerateMigrationFiles(migrationData *MigrationData) error {
 		return err
 	}
 
-	tmpl, err := template.ParseFiles(MigrationUpTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, MigrationUpTemplatePath)
 	if err != nil {
 		return err
 	}
@@ -76,7 +77,7 @@ func GenerateMigrationFiles(migrationData *MigrationData) error {
 	}
 	defer f.Close()
 
-	tmpl, err = template.ParseFiles(MigrationDownTemplatePath)
+	tmpl, err = template.ParseFS(templates.Files, MigrationDownTemplatePath)
 	if err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func createUuidOsspMigrations() error {
 	}
 	defer f.Close()
 
-	tmpl, err := template.ParseFiles(UuidOsspUpTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, UuidOsspUpTemplatePath)
 	if err != nil {
 		return err
 	}
@@ -112,7 +113,7 @@ func createUuidOsspMigrations() error {
 	}
 	defer f.Close()
 
-	tmpl, err = template.ParseFiles(UuidOsspDownTemplatePath)
+	tmpl, err = template.ParseFS(templates.Files, UuidOsspDownTemplatePath)
 	if err != nil {
 		return err
 	}

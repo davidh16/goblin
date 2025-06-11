@@ -6,6 +6,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
 	"github.com/davidh16/goblin/commands/model/flags/user"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/migration_utils"
 	"github.com/davidh16/goblin/utils/model_utils"
@@ -100,7 +101,7 @@ func ModelCmdHandler() {
 	}
 
 	// Write the model to file
-	tmpl, err := template.New(model_utils.ModelTemplateName).Funcs(funcMap).ParseFiles(model_utils.ModelTemplatePath)
+	tmpl, err := template.New(model_utils.ModelTemplateName).Funcs(funcMap).ParseFS(templates.Files, model_utils.ModelTemplatePath)
 	if err != nil {
 		utils.HandleError(err, "Error parsing model template")
 	}
@@ -163,7 +164,7 @@ func CreateModel(modelData *model_utils.ModelData) error {
 	}
 
 	// Write the model to file
-	tmpl, err := template.New(model_utils.ModelTemplateName).Funcs(funcMap).ParseFiles(model_utils.ModelTemplatePath)
+	tmpl, err := template.New(model_utils.ModelTemplateName).Funcs(funcMap).ParseFS(templates.Files, model_utils.ModelTemplatePath)
 	if err != nil {
 		return err
 	}

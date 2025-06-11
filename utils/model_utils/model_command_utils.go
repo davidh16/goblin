@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/migration_utils"
 	"os"
@@ -163,7 +164,7 @@ func CreateMigrationForUserModel(selectedAttributes []string) error {
 		MigrationColumns: columnDefs,
 		TableName:        "users",
 	}
-	tmpl := template.Must(template.New(migration_utils.CustomMigrationUpTemplateName).Funcs(funcMap).ParseFiles(migration_utils.CustomMigrationUpTemplatePath))
+	tmpl := template.Must(template.New(migration_utils.CustomMigrationUpTemplateName).Funcs(funcMap).ParseFS(templates.Files, migration_utils.CustomMigrationUpTemplatePath))
 
 	err = tmpl.Execute(f, templateData)
 	if err != nil {
@@ -175,7 +176,7 @@ func CreateMigrationForUserModel(selectedAttributes []string) error {
 		return err
 	}
 
-	tmpl, err = template.ParseFiles(migration_utils.CustomMigrationDownTemplatePath)
+	tmpl, err = template.ParseFS(templates.Files, migration_utils.CustomMigrationDownTemplatePath)
 	if err != nil {
 		return err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/davidh16/goblin/cli_config"
 	"github.com/davidh16/goblin/commands/model"
 	centralRepo "github.com/davidh16/goblin/commands/repo/flags/central-repo"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/model_utils"
 	"github.com/davidh16/goblin/utils/repo_utils"
@@ -560,7 +561,7 @@ func AddNewServiceToCentralService(serviceData *ServiceData) error {
 // CreateService generates a new service Go file from a predefined template.
 // It fills in the service entity and package data into the template and writes it to the destination path.
 func CreateService(serviceData *ServiceData) error {
-	tmpl, err := template.ParseFiles(ServiceTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, ServiceTemplatePath)
 	if err != nil {
 		return err
 	}

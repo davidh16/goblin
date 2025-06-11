@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
+	"github.com/davidh16/goblin/templates"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/repo_utils"
 	"github.com/spf13/cobra"
@@ -85,7 +86,7 @@ func GenerateCentralRepo() {
 		GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath)
 	}
 
-	tmpl, err := template.ParseFiles(CentralRepoTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, CentralRepoTemplatePath)
 	if err != nil {
 		utils.HandleError(err)
 	}
@@ -131,7 +132,7 @@ func GenerateCentralRepo() {
 }
 
 func GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath string) {
-	tmpl, err := template.ParseFiles(UnitOfWorkRepoTemplatePath)
+	tmpl, err := template.ParseFS(templates.Files, UnitOfWorkRepoTemplatePath)
 	if err != nil {
 		utils.HandleError(err)
 	}
