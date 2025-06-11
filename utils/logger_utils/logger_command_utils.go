@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	LoggerTemplatePath = "templates/logger.tmpl"
+	LoggerTemplatePath = "logger.tmpl"
 	LoggerFileName     = "logger.go"
 )
 

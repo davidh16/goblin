@@ -1,5 +1,5 @@
 package initialize_utils
 
 const (
-	MainTemplatePath = "templates/main.tmpl"
+	MainTemplatePath = "main.tmpl"
 )

@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	RepoTemplatePath = "templates/repo.tmpl"
+	RepoTemplatePath = "repo.tmpl"
 )
 
 type RepoData struct {

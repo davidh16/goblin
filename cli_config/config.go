@@ -53,7 +53,7 @@ func CreateConfigFile() error {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New("cli_config.tmpl").Funcs(funcMap).ParseFS(templates.Files, "templates/cli_config.tmpl")
+	tmpl, err := template.New("cli_config.tmpl").Funcs(funcMap).ParseFS(templates.Files, "cli_config.tmpl")
 	if err != nil {
 		return err
 	}

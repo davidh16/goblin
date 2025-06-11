@@ -1,6 +1,6 @@
 package router_utils
 
 const (
-	RouterTemplatePath       = "templates/router.tmpl"
-	CustomBinderTemplatePath = "templates/custom_request_binder.tmpl"
+	RouterTemplatePath       = "router.tmpl"
+	CustomBinderTemplatePath = "custom_request_binder.tmpl"
 )

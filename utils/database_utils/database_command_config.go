@@ -1,11 +1,11 @@
 package database_utils
 
 var DatabaseOptionTemplatePaths = map[DatabaseOption]string{
-	PostgresSQL: "templates/postgres.tmpl",
-	MariaDB:     "templates/mariadb.tmpl",
-	Redis:       "templates/redis.tmpl",
+	PostgresSQL: "postgres.tmpl",
+	MariaDB:     "mariadb.tmpl",
+	Redis:       "redis.tmpl",
 }
 
 const (
-	PaginationTemplateFilePath = "templates/pagination.tmpl"
+	PaginationTemplateFilePath = "pagination.tmpl"
 )

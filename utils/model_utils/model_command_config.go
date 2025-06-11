@@ -1,6 +1,6 @@
 package model_utils
 
 const (
-	ModelTemplatePath = "templates/model.tmpl"
+	ModelTemplatePath = "model.tmpl"
 	ModelTemplateName = "model.tmpl"
 )
