@@ -36,16 +36,17 @@ func main() {
 
 	serverAddress := fmt.Sprintf("%s:%s", os.Getenv("SERVER_BIND_ADDRESS"), os.Getenv("SERVER_BIND_PORT"))
 	go func() {
-	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg(appRouter.Start(serverAddress).Error()) {{ else }} fmt.Println(router.Start(serverAddress).Error()) {{ end }}
+	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg(appRouter.Start(serverAddress).Error()) {{ else }} fmt.Println(appRouter.Start(serverAddress).Error()) {{ end }}
 	}()
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
-
-    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg("Shutting down server...") {{ else }} fmt.Println("Shutting down server...")
-	{{.LoggerPackage}}..Logger.Close()  {{ end }}
+    {{ if .LoggerImplemented }}
+    {{.LoggerPackage}}.Logger.LogInfo().Msg("Shutting down server...") {{ else }} fmt.Println("Shutting down server...")
+	{{.LoggerPackage}}..Logger.Close()
+	{{end}}
 	if err := appRouter.Shutdown(nil); err != nil {
 	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogFatal().Msg(err.Error()) {{ else }} log.Fatal(err.Error()) {{ end }}
 	}
