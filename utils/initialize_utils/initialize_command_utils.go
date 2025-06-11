@@ -96,7 +96,7 @@ func ExecuteRouter(routerData *router_utils.RouterData, selectedMiddlewares []st
 		routerData.ImplementMiddlewares = true
 		err := middleware_utils.GenerateMiddlewares(selectedMiddlewares)
 		if err != nil {
-			utils.HandleError(err)
+			return err
 		}
 	}
 	for _, m := range selectedMiddlewares {
@@ -114,7 +114,7 @@ func ExecuteRouter(routerData *router_utils.RouterData, selectedMiddlewares []st
 
 	err := router_utils.GenerateRouter(routerData)
 	if err != nil {
-		utils.HandleError(err)
+		return err
 	}
 
 	fmt.Println("✅ Router generated successfully.")
@@ -136,7 +136,7 @@ func ExecuteCentralService(implementRepo bool) error {
 	f, err := os.Create(centralServicePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				return err
 			}
@@ -185,7 +185,7 @@ func ExecuteCentralRepo() error {
 		utils.HandleError(err)
 	}
 
-	err = os.Mkdir(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
+	err = os.MkdirAll(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
 	if err != nil {
 		return err
 	}

@@ -93,7 +93,7 @@ func GenerateCentralRepo() {
 	f, err := os.Create(centralRepoPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				fmt.Println("Error creating folder:", err)
 			}
@@ -139,7 +139,7 @@ func GenerateUnitOfWorkRepoUtil(unitOFWorkRepoPath string) {
 	f, err := os.Create(unitOFWorkRepoPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.RepositoriesFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				fmt.Println("Error creating folder:", err)
 			}

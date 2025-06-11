@@ -36,7 +36,7 @@ func GenerateMigrationDataFromName(name string) *MigrationData {
 func GenerateMigrationFiles(migrationData *MigrationData) error {
 
 	if exists := utils.FileExists(cli_config.CliConfig.MigrationsFolderPath); !exists {
-		err := os.Mkdir(cli_config.CliConfig.MigrationsFolderPath, 0755) // 0755 = rwxr-xr-x
+		err := os.MkdirAll(cli_config.CliConfig.MigrationsFolderPath, 0755) // 0755 = rwxr-xr-x
 		if err != nil {
 			return err
 		}

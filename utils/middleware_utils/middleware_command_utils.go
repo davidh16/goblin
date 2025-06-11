@@ -35,6 +35,8 @@ var MiddlewareOptionTemplateFileNameMap = map[string]string{
 
 func GenerateMiddlewares(middlewareOptions []string) error {
 	if !utils.FileExists(cli_config.CliConfig.MiddlewaresFolderPath) {
+		fmt.Println("ovo je middlewares folder path: ", cli_config.CliConfig.MiddlewaresFolderPath)
+
 		err := os.MkdirAll(cli_config.CliConfig.MiddlewaresFolderPath, os.ModePerm)
 		if err != nil {
 			return err

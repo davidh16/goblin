@@ -3,7 +3,6 @@ package initialize
 import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/davidh16/goblin/cli_config"
-	central_controller "github.com/davidh16/goblin/commands/controller/flags/central-controller"
 	"github.com/davidh16/goblin/utils"
 	"github.com/davidh16/goblin/utils/database_utils"
 	"github.com/davidh16/goblin/utils/initialize_utils"
@@ -90,7 +89,7 @@ func initCmdHandler() {
 
 	workingDirectory, err := os.Getwd()
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Unable to get working directory")
 	}
 	envFilePath := path.Join(workingDirectory, ".env")
 	envFile, err := os.OpenFile(envFilePath, os.O_CREATE|os.O_RDWR, 0644)
@@ -102,55 +101,50 @@ func initCmdHandler() {
 		"SERVER_BIND_ADDRESS": "0.0.0.0",
 	})
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Failed to write to env file")
 	}
 
 	if initData.ImplementDatabase {
 		err = initialize_utils.ExecuteDatabases(selectedDatabaseNames)
 		if err != nil {
-			utils.HandleError(err)
+			utils.HandleError(err, "Error executing databases")
 		}
 	}
 
 	err = initialize_utils.ExecuteCentralController(initData.ImplementCentralService)
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Error executing central controller")
 	}
 
 	if initData.ImplementCentralService {
 		err = initialize_utils.ExecuteCentralService(initData.ImplementCentralRepository)
 		if err != nil {
-			utils.HandleError(err)
+			utils.HandleError(err, "Error initializing central service")
 		}
 	}
 
 	if initData.ImplementCentralRepository {
 		err = initialize_utils.ExecuteCentralRepo()
 		if err != nil {
-			utils.HandleError(err)
+			utils.HandleError(err, "Error executing central repository")
 		}
-	}
-
-	err = central_controller.GenerateCentralController()
-	if err != nil {
-		utils.HandleError(err)
 	}
 
 	// execute router
 	err = initialize_utils.ExecuteRouter(routerData, selectedMiddlewares)
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Error generating router")
 	}
 
 	// execute main
 	tmpl, err := template.ParseFiles(initialize_utils.MainTemplatePath)
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Error parsing template")
 	}
 
 	f, err := os.Create(path.Join(workingDirectory, "main.go"))
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Unable to create main.go file")
 	}
 	defer f.Close()
 
@@ -202,7 +196,7 @@ func initCmdHandler() {
 
 	err = tmpl.Execute(f, templateData)
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Error executing template")
 	}
 
 	return

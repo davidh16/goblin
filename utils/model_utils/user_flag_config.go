@@ -30,7 +30,7 @@ var AllPossibleUserModelAttributes = map[string]reflect.Type{
 var NonOptionalUserModelAttributeKeys = []string{"Uuid", "Email", "Password", "CreatedAt", "UpdatedAt"}
 
 const (
-	UserModelTemplatePath = "commands/model/flags/user/user.tmpl"
+	UserModelTemplatePath = "templates/user.tmpl"
 )
 
 type UserModelAttribute struct {

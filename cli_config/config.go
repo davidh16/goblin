@@ -41,7 +41,7 @@ func CreateConfigFile() error {
 		return err
 	}
 
-	err = os.Mkdir(filepath.Join(home, ".goblin"), 0755)
+	err = os.MkdirAll(filepath.Join(home, ".goblin"), 0755)
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
@@ -52,7 +52,7 @@ func CreateConfigFile() error {
 		"GetProjectName": utils.GetProjectName,
 	}
 
-	tmpl, err := template.New("cli_config.tmpl").Funcs(funcMap).ParseFiles("cli_config/cli_config.tmpl")
+	tmpl, err := template.New("cli_config.tmpl").Funcs(funcMap).ParseFiles("templates/cli_config.tmpl")
 	if err != nil {
 		return err
 	}

@@ -40,7 +40,7 @@ func loggerCmdHandler() {
 
 	loggerDirectoryExists := utils.FileExists(cli_config.CliConfig.LoggerFolderPath)
 	if !loggerDirectoryExists {
-		err := os.Mkdir(cli_config.CliConfig.LoggerFolderPath, 0755) // 0755 = rwxr-xr-x
+		err := os.MkdirAll(cli_config.CliConfig.LoggerFolderPath, 0755) // 0755 = rwxr-xr-x
 		if err != nil {
 			fmt.Println("Error creating folder:", err)
 		}

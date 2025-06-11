@@ -81,7 +81,7 @@ func GenerateCentralService() {
 	f, err := os.Create(centralServicePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.ServicesFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				fmt.Println("Error creating folder:", err)
 			}

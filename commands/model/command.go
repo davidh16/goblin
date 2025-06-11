@@ -108,7 +108,7 @@ func ModelCmdHandler() {
 	f, err := os.Create(modelData.ModelFilePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.ModelsFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.ModelsFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				utils.HandleError(err, "Error creating model folder")
 			}
@@ -171,7 +171,7 @@ func CreateModel(modelData *model_utils.ModelData) error {
 	f, err := os.Create(modelData.ModelFilePath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.ModelsFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.ModelsFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				if !os.IsExist(err) {
 					return err

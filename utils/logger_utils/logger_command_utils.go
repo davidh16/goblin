@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	LoggerTemplatePath = "commands/logger/logger.tmpl"
+	LoggerTemplatePath = "templates/logger.tmpl"
 	LoggerFileName     = "logger.go"
 )
 
 func GenerateLogger() error {
 
 	if exists := utils.FileExists(cli_config.CliConfig.LoggerFolderPath); !exists {
-		err := os.Mkdir(cli_config.CliConfig.LoggerFolderPath, os.ModePerm)
+		err := os.MkdirAll(cli_config.CliConfig.LoggerFolderPath, os.ModePerm)
 		if err != nil {
 			return err
 		}

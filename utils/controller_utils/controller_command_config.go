@@ -1,8 +1,8 @@
 package controller_utils
 
 const (
-	CentralControllerTemplatePath = "commands/controller/flags/central-controller/central_controller.tmpl"
+	CentralControllerTemplatePath = "templates/central_controller.tmpl"
 	CentralControllerTemplateName = "central_controller.tmpl"
 
-	ControllerTemplatePath = "commands/controller/controller.tmpl"
+	ControllerTemplatePath = "templates/controller.tmpl"
 )

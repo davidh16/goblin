@@ -133,7 +133,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		f, err := os.Create(jobPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
+				err = os.MkdirAll(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
 				if err != nil {
 					return err
 				}
@@ -172,7 +172,7 @@ func ImplementJobsLogic(data *WorkerizeData) error {
 		f, err := os.Create(jobPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
+				err = os.MkdirAll(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
 				if err != nil {
 					return err
 				}
@@ -215,7 +215,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 		f, err := os.Create(jobPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
+				err = os.MkdirAll(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
 				if err != nil {
 					return err
 				}
@@ -256,7 +256,7 @@ func ImplementWorkersLogic(data *WorkerizeData) error {
 		f, err := os.Create(jobPath)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				err = os.Mkdir(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
+				err = os.MkdirAll(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
 				if err != nil {
 					return err
 				}
@@ -441,7 +441,7 @@ func GenerateCustomJobMetadataFile(customJobData *CustomJobData) error {
 	f, err := os.Create(jobMetadataPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.JobsFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				return err
 			}
@@ -616,7 +616,7 @@ func GenerateCustomWorkerPool(customJobData *CustomJobData) error {
 	f, err := os.Create(customWorkerPoolPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			err = os.Mkdir(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
+			err = os.MkdirAll(cli_config.CliConfig.WorkersFolderPath, 0755) // 0755 = rwxr-xr-x
 			if err != nil {
 				return err
 			}
