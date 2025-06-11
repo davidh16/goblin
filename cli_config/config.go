@@ -10,8 +10,6 @@ import (
 	"text/template"
 )
 
-const configFilePath = ".goblin/cli_config.yaml"
-
 type Config struct {
 	ModelsFolderPath            string `yaml:"models_folder_path"`       // path for folder where model go files are located
 	ControllersFolderPath       string `yaml:"controllers_folder_path"`  // path for folder where controller go files are located
@@ -42,7 +40,14 @@ func CreateConfigFile() error {
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Join(home, ".goblin"), 0755)
+	projectName, err := utils.GetProjectName()
+	if err != nil {
+		return err
+	}
+
+	configFilePath := filepath.Join(home, ".goblin", projectName, "cli_config.yaml")
+
+	err = os.MkdirAll(filepath.Join(home, ".goblin", projectName), 0755)
 	if err != nil {
 		if !os.IsExist(err) {
 			return err
@@ -58,7 +63,7 @@ func CreateConfigFile() error {
 		return err
 	}
 
-	configYamlFile, err := os.Create(filepath.Join(home, configFilePath))
+	configYamlFile, err := os.Create(configFilePath)
 	if err != nil {
 		return err
 	}
@@ -86,12 +91,19 @@ func UpdateConfigFile(cfg map[string]string) error {
 		return err
 	}
 
+	projectName, err := utils.GetProjectName()
+	if err != nil {
+		return err
+	}
+
+	configFilePath := filepath.Join(home, ".goblin", projectName, "cli_config.yaml")
+
 	updatedYAML, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err
 	}
 
-	if err = os.WriteFile(filepath.Join(home, configFilePath), updatedYAML, 0644); err != nil {
+	if err = os.WriteFile(configFilePath, updatedYAML, 0644); err != nil {
 		return err
 	}
 
@@ -109,7 +121,14 @@ func LoadConfigAsMap() (map[string]string, error) {
 		return nil, err
 	}
 
-	data, err := os.ReadFile(filepath.Join(home, configFilePath))
+	projectName, err := utils.GetProjectName()
+	if err != nil {
+		return nil, err
+	}
+
+	configFilePath := filepath.Join(home, ".goblin", projectName, "cli_config.yaml")
+
+	data, err := os.ReadFile(configFilePath)
 	if err != nil {
 		return cfg, err
 	}
@@ -131,7 +150,14 @@ func LoadConfig() error {
 		return err
 	}
 
-	data, err := os.ReadFile(filepath.Join(home, configFilePath))
+	projectName, err := utils.GetProjectName()
+	if err != nil {
+		return err
+	}
+
+	configFilePath := filepath.Join(home, ".goblin", projectName, "cli_config.yaml")
+
+	data, err := os.ReadFile(configFilePath)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			utils.HandleError(err)

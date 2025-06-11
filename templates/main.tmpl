@@ -7,11 +7,11 @@ import (
 	"os/signal"
 	"syscall"
 	"github.com/joho/godotenv"
-	{{if .ImplementCentralRepository}}"{{.RepositoriesPackageImport}}"{{end}}
-	{{if .ImplementCentralRepository}}"{{.DatabasesPackageImport}}"{{end}}
-	{{if .ImplementCentralService}}"{{.ServicesPackageImport}}"{{end}}
 	"{{.ControllersPackageImport}}"
 	"{{.LoggerPackageImport}}"
+	{{if .ImplementCentralRepository}}"{{.RepositoriesPackageImport}}"{{end}}
+    {{if .ImplementCentralRepository}}"{{.DatabasesPackageImport}}"{{end}}
+    {{if .ImplementCentralService}}"{{.ServicesPackageImport}}"{{end}}
 )
 
 func main() {
@@ -43,10 +43,8 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	<-quit
-    {{ if .LoggerImplemented }}
-    {{.LoggerPackage}}.Logger.LogInfo().Msg("Shutting down server...") {{ else }} fmt.Println("Shutting down server...")
-	{{.LoggerPackage}}..Logger.Close()
-	{{end}}
+    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg("Shutting down server...") {{ else }} fmt.Println("Shutting down server...") {{end}}
+	{{ if .LoggerImplemented }}  {{.LoggerPackage}}.Logger.Close() {{end}}
 	if err := appRouter.Shutdown(nil); err != nil {
 	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogFatal().Msg(err.Error()) {{ else }} log.Fatal(err.Error()) {{ end }}
 	}
