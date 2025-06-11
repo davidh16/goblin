@@ -8,7 +8,7 @@ import (
 	"syscall"
 	"github.com/joho/godotenv"
 	"{{.ControllersPackageImport}}"
-	"{{.LoggerPackageImport}}"
+	{{ if .LoggerImplemented }}"{{.LoggerPackageImport}}"{{end}}
 	{{if .ImplementCentralRepository}}"{{.RepositoriesPackageImport}}"{{end}}
     {{if .ImplementCentralRepository}}"{{.DatabasesPackageImport}}"{{end}}
     {{if .ImplementCentralService}}"{{.ServicesPackageImport}}"{{end}}
@@ -45,7 +45,7 @@ func main() {
 	<-quit
     {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg("Shutting down server...") {{ else }} fmt.Println("Shutting down server...") {{end}}
 	{{ if .LoggerImplemented }}  {{.LoggerPackage}}.Logger.Close() {{end}}
-	if err := appRouter.Shutdown(nil); err != nil {
+	if err = appRouter.Shutdown(nil); err != nil {
 	    {{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogFatal().Msg(err.Error()) {{ else }} log.Fatal(err.Error()) {{ end }}
 	}
 	{{ if .LoggerImplemented }} {{.LoggerPackage}}.Logger.LogInfo().Msg("Server stopped") {{ else }} fmt.Println("Server stopped") {{ end }}
