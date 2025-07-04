@@ -24,8 +24,8 @@ var CentralRepoCmd = &cobra.Command{
 }
 
 const (
-	CentralRepoTemplatePath    = "commands/repo/flags/central-repo/central_repo.tmpl"
-	UnitOfWorkRepoTemplatePath = "commands/repo/flags/central-repo/unit_of_work.tmpl"
+	CentralRepoTemplatePath    = "central_repo.tmpl"
+	UnitOfWorkRepoTemplatePath = "unit_of_work.tmpl"
 )
 
 func GenerateCentralRepo() {
