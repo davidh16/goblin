@@ -141,6 +141,11 @@ func CreateMigrationForUserModel(selectedAttributes []string) error {
 		columnDefs = append(columnDefs, column)
 	}
 
+	err := os.MkdirAll(cli_config.CliConfig.MigrationsFolderPath, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to create migrations directory: %w", err)
+	}
+
 	usersUpMigrationPath := path.Join(cli_config.CliConfig.MigrationsFolderPath, time.Now().Format("20060102150405")+"_users_up.sql")
 	usersDownMigrationPath := path.Join(cli_config.CliConfig.MigrationsFolderPath, time.Now().Format("20060102150405")+"_users_down.sql")
 
