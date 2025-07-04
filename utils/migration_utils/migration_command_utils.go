@@ -44,7 +44,7 @@ func GenerateMigrationFiles(migrationData *MigrationData) error {
 	}
 
 	if exists := utils.FileExists(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp_up.sql")); !exists {
-		err := createUuidOsspMigrations()
+		err := CreateUuidOsspMigrations()
 		if err != nil {
 			return err
 		}
@@ -90,8 +90,8 @@ func GenerateMigrationFiles(migrationData *MigrationData) error {
 	return nil
 }
 
-func createUuidOsspMigrations() error {
-	f, err := os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp_up.sql"))
+func CreateUuidOsspMigrations() error {
+	f, err := os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "00000000000001_uuid_ossp_up.sql"))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func createUuidOsspMigrations() error {
 		return err
 	}
 
-	f, err = os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp_down.sql"))
+	f, err = os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "00000000000001_uuid_ossp_down.sql"))
 	if err != nil {
 		return err
 	}
