@@ -37,8 +37,8 @@ func migrationCmdHandler() {
 		}
 
 		example := time.Now().Format("20060102150405") + "_" + migrationData.MigrationNameSnakeCase + "_(up/down).sql"
-		migrationData.MigrationUpFileName = time.Now().Format("20060102150405") + "_" + migrationData.MigrationNameSnakeCase + "_up.sql"
-		migrationData.MigrationDownFileName = time.Now().Format("20060102150405") + "_" + migrationData.MigrationNameSnakeCase + "_down.sql"
+		migrationData.MigrationUpFileName = time.Now().Format("20060102150405") + "_" + migrationData.MigrationNameSnakeCase + ".up.sql"
+		migrationData.MigrationDownFileName = time.Now().Format("20060102150405") + "_" + migrationData.MigrationNameSnakeCase + ".down.sql"
 
 		var confirm bool
 		confirmPrompt := &survey.Confirm{

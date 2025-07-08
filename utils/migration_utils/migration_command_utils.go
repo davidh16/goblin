@@ -26,8 +26,8 @@ func GenerateMigrationDataFromName(name string) *MigrationData {
 
 	migrationData := NewMigrationData()
 	migrationData.MigrationNameSnakeCase = name
-	migrationData.MigrationUpFileName = time.Now().Format("20060102150405") + "_" + name + "_up.sql"
-	migrationData.MigrationDownFileName = time.Now().Format("20060102150405") + "_" + name + "_down.sql"
+	migrationData.MigrationUpFileName = time.Now().Format("20060102150405") + "_" + name + ".up.sql"
+	migrationData.MigrationDownFileName = time.Now().Format("20060102150405") + "_" + name + ".down.sql"
 	migrationData.MigrationUpFileFullPath = path.Join(cli_config.CliConfig.MigrationsFolderPath, migrationData.MigrationUpFileName)
 	migrationData.MigrationDownFileFullPath = path.Join(cli_config.CliConfig.MigrationsFolderPath, migrationData.MigrationDownFileName)
 
@@ -43,7 +43,7 @@ func GenerateMigrationFiles(migrationData *MigrationData) error {
 		}
 	}
 
-	if exists := utils.FileExists(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp_up.sql")); !exists {
+	if exists := utils.FileExists(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp.up.sql")); !exists {
 		err := CreateUuidOsspMigrations()
 		if err != nil {
 			return err
@@ -91,7 +91,7 @@ func GenerateMigrationFiles(migrationData *MigrationData) error {
 }
 
 func CreateUuidOsspMigrations() error {
-	f, err := os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "00000000000001_uuid_ossp_up.sql"))
+	f, err := os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "00000000000001_uuid_ossp.up.sql"))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func CreateUuidOsspMigrations() error {
 		return err
 	}
 
-	f, err = os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "00000000000001_uuid_ossp_down.sql"))
+	f, err = os.Create(path.Join(cli_config.CliConfig.MigrationsFolderPath, "00000000000001_uuid_ossp.down.sql"))
 	if err != nil {
 		return err
 	}

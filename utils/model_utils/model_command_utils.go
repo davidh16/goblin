@@ -146,15 +146,15 @@ func CreateMigrationForUserModel(selectedAttributes []string) error {
 		return fmt.Errorf("failed to create migrations directory: %w", err)
 	}
 
-	if exists := utils.FileExists(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp_up.sql")); !exists {
+	if exists := utils.FileExists(path.Join(cli_config.CliConfig.MigrationsFolderPath, "uuid_ossp.up.sql")); !exists {
 		err = migration_utils.CreateUuidOsspMigrations()
 		if err != nil {
 			return err
 		}
 	}
 
-	usersUpMigrationPath := path.Join(cli_config.CliConfig.MigrationsFolderPath, time.Now().Format("20060102150405")+"_users_up.sql")
-	usersDownMigrationPath := path.Join(cli_config.CliConfig.MigrationsFolderPath, time.Now().Format("20060102150405")+"_users_down.sql")
+	usersUpMigrationPath := path.Join(cli_config.CliConfig.MigrationsFolderPath, time.Now().Format("20060102150405")+"_users.up.sql")
+	usersDownMigrationPath := path.Join(cli_config.CliConfig.MigrationsFolderPath, time.Now().Format("20060102150405")+"_users.down.sql")
 
 	f, err := os.Create(usersUpMigrationPath)
 	if err != nil {
