@@ -122,13 +122,13 @@ func ModelCmdHandler() {
 	defer f.Close()
 
 	templateData := struct {
-		Package         string
-		ModelPascalCase string
-		ModelCamelCase  string
+		Package             string
+		ModelPascalCase     string
+		PluralizedSnakeCase string
 	}{
-		Package:         strings.Split(cli_config.CliConfig.ModelsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ModelsFolderPath, "/"))-1],
-		ModelPascalCase: modelData.ModelEntity,
-		ModelCamelCase:  utils.PascalToCamel(modelData.ModelEntity),
+		Package:             strings.Split(cli_config.CliConfig.ModelsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ModelsFolderPath, "/"))-1],
+		ModelPascalCase:     modelData.ModelEntity,
+		PluralizedSnakeCase: utils.PascalToSnake(modelData.ModelEntity),
 	}
 
 	err = tmpl.Execute(f, templateData)
@@ -187,13 +187,13 @@ func CreateModel(modelData *model_utils.ModelData) error {
 	defer f.Close()
 
 	templateData := struct {
-		Package         string
-		ModelPascalCase string
-		ModelCamelCase  string
+		Package             string
+		ModelPascalCase     string
+		PluralizedSnakeCase string
 	}{
-		Package:         strings.Split(cli_config.CliConfig.ModelsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ModelsFolderPath, "/"))-1],
-		ModelPascalCase: modelData.ModelEntity,
-		ModelCamelCase:  utils.PascalToCamel(modelData.ModelEntity),
+		Package:             strings.Split(cli_config.CliConfig.ModelsFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ModelsFolderPath, "/"))-1],
+		ModelPascalCase:     modelData.ModelEntity,
+		PluralizedSnakeCase: utils.PascalToSnake(inflection.Plural(modelData.ModelEntity)),
 	}
 
 	err = tmpl.Execute(f, templateData)
