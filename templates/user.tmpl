@@ -7,7 +7,7 @@ import (
 )
 
 type User struct {
-	Uuid      string    `json:"uuid"`
+	Uuid      string    `json:"uuid" gorm:"type:uuid;primaryKey;default:uuid_generate_v4()"`
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
