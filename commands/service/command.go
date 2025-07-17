@@ -145,44 +145,10 @@ func serviceCmdHandler() {
 	var toImplement bool
 	switch serviceData.RepoStrategy {
 	case service_utils.RepoStrategyNewRepo:
-		var decision string
-		prompt := &survey.Select{
-			Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(&serviceData.RepoData[0], serviceData.RepoData[0].SelectedRepoMethodsToImplement),
-			Options: []string{
-				"Yes, choose methods to implement",
-				"No, skip this step",
-			},
-		}
-		err = survey.AskOne(prompt, &decision)
-		if err != nil {
-			utils.HandleError(err)
-		}
-
-		toImplement = decision == "Yes, choose methods to implement"
-
-		if toImplement {
-			selectedServiceProxyMethodsPrompt := &survey.MultiSelect{
-				Message: "Which service proxy methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
-				Options: serviceData.RepoData[0].SelectedRepoMethodsToImplement,
-			}
-			err = survey.AskOne(selectedServiceProxyMethodsPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
-			if err != nil {
-				utils.HandleError(err)
-			}
-		}
-
-	case service_utils.RepoStrategyExistingRepo:
-
-		for _, repo := range serviceData.RepoData {
-
-			existingRepoMethods, err := service_utils.ListExistingRepoMethods(&repo)
-			if err != nil {
-				utils.HandleError(err)
-			}
-
+		if len(serviceData.RepoData[0].SelectedRepoMethodsToImplement) > 0 {
 			var decision string
 			prompt := &survey.Select{
-				Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(&repo, existingRepoMethods),
+				Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(&serviceData.RepoData[0], serviceData.RepoData[0].SelectedRepoMethodsToImplement),
 				Options: []string{
 					"Yes, choose methods to implement",
 					"No, skip this step",
@@ -192,15 +158,52 @@ func serviceCmdHandler() {
 			if err != nil {
 				utils.HandleError(err)
 			}
+
 			toImplement = decision == "Yes, choose methods to implement"
+
 			if toImplement {
-				selectMethodsToImplementPrompt := &survey.MultiSelect{
-					Message: "Which methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
-					Options: existingRepoMethods,
+				selectedServiceProxyMethodsPrompt := &survey.MultiSelect{
+					Message: "Which service proxy methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
+					Options: serviceData.RepoData[0].SelectedRepoMethodsToImplement,
 				}
-				err = survey.AskOne(selectMethodsToImplementPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
+				err = survey.AskOne(selectedServiceProxyMethodsPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
 				if err != nil {
 					utils.HandleError(err)
+				}
+			}
+		}
+	case service_utils.RepoStrategyExistingRepo:
+
+		for _, repo := range serviceData.RepoData {
+
+			existingRepoMethods, err := service_utils.ListExistingRepoMethods(&repo)
+			if err != nil {
+				utils.HandleError(err)
+			}
+
+			if len(existingRepoMethods) > 0 {
+				var decision string
+				prompt := &survey.Select{
+					Message: service_utils.GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(&repo, existingRepoMethods),
+					Options: []string{
+						"Yes, choose methods to implement",
+						"No, skip this step",
+					},
+				}
+				err = survey.AskOne(prompt, &decision)
+				if err != nil {
+					utils.HandleError(err)
+				}
+				toImplement = decision == "Yes, choose methods to implement"
+				if toImplement {
+					selectMethodsToImplementPrompt := &survey.MultiSelect{
+						Message: "Which methods do you want to implement?\n  [Press enter without selecting any of the options to skip]\n",
+						Options: existingRepoMethods,
+					}
+					err = survey.AskOne(selectMethodsToImplementPrompt, &serviceData.SelectedServiceProxyMethodToImplement)
+					if err != nil {
+						utils.HandleError(err)
+					}
 				}
 			}
 		}
