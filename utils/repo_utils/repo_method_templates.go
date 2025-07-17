@@ -243,7 +243,7 @@ var generateGetByUuidMethodBody = func(modelPascalCase, modelDataType string) []
 							Sel: ast.NewIdent("First"),
 						},
 						Args: []ast.Expr{
-							ast.NewIdent(utils.PascalToCamel(modelPascalCase)),
+							ast.NewIdent("&" + utils.PascalToCamel(modelPascalCase)),
 						},
 					},
 					Sel: ast.NewIdent("Error"),
