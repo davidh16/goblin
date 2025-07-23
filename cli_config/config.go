@@ -24,6 +24,7 @@ type Config struct {
 	RouterFolderPath            string `yaml:"router_folder_path"`
 	MiddlewaresFolderPath       string `yaml:"middlewares_folder_path"`
 	AuthFolderPath              string `yaml:"auth_folder_path"`
+	ValidatorFolderPath         string `yaml:"validator_folder_path"`
 }
 
 var CliConfig *Config

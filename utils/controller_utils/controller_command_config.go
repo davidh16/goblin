@@ -5,4 +5,6 @@ const (
 	CentralControllerTemplateName = "central_controller.tmpl"
 
 	ControllerTemplatePath = "controller.tmpl"
+
+	ValidatorTemplatePath = "validator.tmpl"
 )

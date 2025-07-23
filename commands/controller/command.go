@@ -156,6 +156,13 @@ func controllerCmdHandler() {
 		}
 	}
 
+	if !utils.FileExists(path.Join(cli_config.CliConfig.ValidatorFolderPath, "central_controller.go")) {
+		err = controller_utils.CreateValidator()
+		if err != nil {
+			utils.HandleError(err)
+		}
+	}
+
 	if !utils.FileExists(controllerData.ControllerFilePath) {
 		err = controller_utils.AddNewControllerToCentralController(controllerData)
 		if err != nil {

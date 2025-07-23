@@ -378,127 +378,152 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 	}
 
 	servicePackageImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ServicesFolderPath)
-	servicePackage := strings.Split(servicePackageImport, "/")[len(strings.Split(servicePackageImport, "/"))-1]
+	servicePackage := path.Base(servicePackageImport)
+	validatorImport := "github.com/davidh16/goblin/validator"
+	validatorAlias := "validator"
 
-	// if controllerData.RepoData != nil that means we are adding a new service, therefore we should also add imports if needed, if we have no implemented service, we can skip this step
+	// Add imports for services and validator if missing
+	importsNeeded := map[string]string{}
 	if controllerData.ServiceData != nil {
-		// Track if import already exists
-		importFound := false
+		importsNeeded[servicePackageImport] = servicePackage
+	}
+	importsNeeded[validatorImport] = validatorAlias
+
+	for impPath, asName := range importsNeeded {
+		found := false
 		for _, imp := range node.Imports {
-			impPath := strings.Trim(imp.Path.Value, `"`)
-			if impPath == servicePackageImport {
-				importFound = true
+			if strings.Trim(imp.Path.Value, `"`) == impPath {
+				found = true
 				break
 			}
 		}
-
-		// Add import if needed
-		if !importFound {
-			newImport := &ast.ImportSpec{
-				Path: &ast.BasicLit{
-					Kind:  token.STRING,
-					Value: fmt.Sprintf("%q", servicePackageImport),
-				},
+		if !found {
+			newImp := &ast.ImportSpec{
+				Path: &ast.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", impPath)},
 			}
-
-			inserted := false
+			if asName != "" {
+				newImp.Name = ast.NewIdent(asName)
+			}
+			insertPos := -1
 			for _, decl := range node.Decls {
-				if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
-					genDecl.Specs = append(genDecl.Specs, newImport)
-					inserted = true
+				if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok == token.IMPORT {
+					gd.Specs = append(gd.Specs, newImp)
+					insertPos = -2
 					break
 				}
 			}
-
-			if !inserted {
-				importDecl := &ast.GenDecl{
-					Tok: token.IMPORT,
-					Specs: []ast.Spec{
-						newImport,
-					},
-				}
-				node.Decls = append([]ast.Decl{importDecl}, node.Decls...)
+			if insertPos == -1 {
+				imDecl := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{newImp}}
+				node.Decls = append([]ast.Decl{imDecl}, node.Decls...)
 			}
 		}
 	}
 
 	ast.Inspect(node, func(n ast.Node) bool {
-		if gen, ok := n.(*ast.TypeSpec); ok && gen.Name.Name == structName {
-			if structType, ok := gen.Type.(*ast.StructType); ok {
-				structType.Fields.List = append(structType.Fields.List, &ast.Field{
+		if ts, ok := n.(*ast.TypeSpec); ok && ts.Name.Name == structName {
+			if st, ok := ts.Type.(*ast.StructType); ok {
+				st.Fields.List = append(st.Fields.List, &ast.Field{
 					Names: []*ast.Ident{ast.NewIdent(controllerData.ControllerFullName)},
 					Type:  ast.NewIdent(attributeDataType),
 				})
-				structType.Fields.Opening = token.Pos(1)
+				st.Fields.Opening = token.Pos(1)
 			}
 		}
 
 		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == constructorName {
+			var consArgs []ast.Expr
 
-			var constructorArgs []ast.Expr
-			if controllerData.ServiceData != nil {
-
-				for _, service := range controllerData.ServiceData {
-					constructorArgs = append(constructorArgs, &ast.SelectorExpr{
-						X:   ast.NewIdent("centralService"),
-						Sel: ast.NewIdent(service.ServiceFullName),
-					})
-				}
-
-				paramValue := "centralService"
-				receiverType := "CentralService"
-
-				paramExists := false
-				for _, param := range fn.Type.Params.List {
-					for _, name := range param.Names {
-						if name.Name == utils.PascalToCamel(paramValue) {
-							paramExists = true
-							break
-						}
-					}
-					if paramExists {
+			// Inject validator instantiation at the top
+			declared := false
+			for _, stmt := range fn.Body.List {
+				if asn, ok := stmt.(*ast.AssignStmt); ok {
+					if ident, ok := asn.Lhs[0].(*ast.Ident); ok && ident.Name == "validator" {
+						declared = true
 						break
 					}
 				}
-
-				if !paramExists && controllerData.ServiceData != nil {
-					fn.Type.Params.List = append(fn.Type.Params.List, &ast.Field{
-						Names: []*ast.Ident{ast.NewIdent(paramValue)},
-						Type: &ast.StarExpr{
-							X: &ast.SelectorExpr{
-								X:   ast.NewIdent(servicePackage),
-								Sel: ast.NewIdent(receiverType),
-							},
+			}
+			if !declared {
+				declStmt := &ast.AssignStmt{
+					Lhs: []ast.Expr{ast.NewIdent("validator")},
+					Tok: token.DEFINE,
+					Rhs: []ast.Expr{&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   ast.NewIdent(validatorAlias),
+							Sel: ast.NewIdent("NewValidator"),
 						},
+					}},
+				}
+				fn.Body.List = append([]ast.Stmt{declStmt}, fn.Body.List...)
+			}
+
+			// Collect service args
+			if controllerData.ServiceData != nil {
+				for _, svc := range controllerData.ServiceData {
+					consArgs = append(consArgs, &ast.SelectorExpr{
+						X:   ast.NewIdent("centralService"),
+						Sel: ast.NewIdent(svc.ServiceFullName),
 					})
 				}
 			}
+			// Always add validator
+			consArgs = append(consArgs, ast.NewIdent("validator"))
 
-			// if controller has no service implementation, constructorArgs will be empty
-			if retStmt, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok {
-				if compLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
-					compLit.Elts = append(compLit.Elts, &ast.KeyValueExpr{
-						Key: ast.NewIdent(controllerData.ControllerFullName),
-						Value: &ast.CallExpr{
-							Fun:  ast.NewIdent(controllerConstructor),
-							Args: constructorArgs, // 🔥 dynamic argument list
-						},
-					})
+			// Update return composite-literal
+			if ret, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok {
+				if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok {
+					if cl, ok := ul.X.(*ast.CompositeLit); ok {
+						cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+							Key: ast.NewIdent(controllerData.ControllerFullName),
+							Value: &ast.CallExpr{
+								Fun:  ast.NewIdent(controllerConstructor),
+								Args: consArgs,
+							},
+						})
+					}
 				}
 			}
 		}
-
 		return true
 	})
 
-	outFile, err := os.Create(centralControllerFilePath)
+	out, err := os.Create(centralControllerFilePath)
 	if err != nil {
 		return err
 	}
-	defer outFile.Close()
+	defer out.Close()
 
 	cfg := &printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 4}
-	if err = cfg.Fprint(outFile, fileSet, node); err != nil {
+	return cfg.Fprint(out, fileSet, node)
+}
+
+func CreateValidator() error {
+
+	err := os.MkdirAll(cli_config.CliConfig.ValidatorFolderPath, 0755)
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := template.ParseFS(templates.Files, ValidatorTemplatePath)
+	if err != nil {
+		return err
+	}
+
+	validatorFilePath := path.Join(cli_config.CliConfig.ValidatorFolderPath, "validator.go")
+	f, err := os.Create(validatorFilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	templateData := struct {
+		ValidatorPackage string
+	}{
+		ValidatorPackage: strings.Split(cli_config.CliConfig.ValidatorFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ValidatorFolderPath, "/"))-1],
+	}
+
+	err = tmpl.Execute(f, templateData)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -519,11 +544,13 @@ func CreateController(controllerData *ControllerData) error {
 	defer f.Close()
 
 	templateData := struct {
-		ControllerPackage string
-		ControllerEntity  string
+		ControllerPackage      string
+		ControllerEntity       string
+		ValidatorPackageImport string
 	}{
-		ControllerPackage: strings.Split(cli_config.CliConfig.ControllersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ControllersFolderPath, "/"))-1],
-		ControllerEntity:  controllerData.ControllerEntity,
+		ControllerPackage:      strings.Split(cli_config.CliConfig.ControllersFolderPath, "/")[len(strings.Split(cli_config.CliConfig.ControllersFolderPath, "/"))-1],
+		ControllerEntity:       controllerData.ControllerEntity,
+		ValidatorPackageImport: path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ValidatorFolderPath),
 	}
 
 	err = tmpl.Execute(f, templateData)

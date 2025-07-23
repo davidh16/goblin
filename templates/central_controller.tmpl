@@ -9,5 +9,7 @@ type CentralController struct {
 }
 
 func NewCentralController({{ if .CentralServiceExists }}centralService *{{.ServicePackage}}.CentralService{{end}}) *CentralController {
+	validator := validator.NewValidator()
+
 	return &CentralController{}
 }

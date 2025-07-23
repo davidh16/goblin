@@ -1,0 +1,52 @@
+package {{.ValidatorPackage}}
+
+import (
+	"errors"
+	"fmt"
+	"github.com/go-playground/validator/v10"
+)
+
+type Validator struct {
+	*validator.Validate
+}
+
+func NewValidator() *Validator {
+
+	v := &Validator{
+		validator.New(),
+	}
+
+	// setup custom validation rules
+	//func (v *Validator) SetupUserCustomValidationRules() {
+    //	_ = v.RegisterValidation(emailCustomValidationRule, emailAddressValidation)
+    //	_ = v.RegisterValidation(strongPasswordCustomValidationRule, strongPassword)
+    //}
+
+	return v
+}
+
+const (
+	emailCustomValidationRule          = "email"
+	strongPasswordCustomValidationRule = "strongPassword"
+)
+
+func handleValidationError(err error) error {
+	var errs validator.ValidationErrors
+	if errors.As(err, &errs) {
+		for _, e := range errs {
+			switch e.Tag() {
+			case "required":
+				return fmt.Errorf("%s is required\n", e.Field())
+			case emailCustomValidationRule:
+				return errors.New("Invalid email address\n")
+			case "min":
+				return fmt.Errorf("%s must be at least %s characters long\n", e.Field(), e.Param())
+			case strongPasswordCustomValidationRule:
+				return fmt.Errorf("Password must be at least 8 characters long and include uppercase, lowercase, digit, and special character\n")
+			default:
+				return fmt.Errorf("Validation failed on field %s with tag %s\n", e.Field(), e.Tag())
+			}
+		}
+	}
+	return err
+}

@@ -1,7 +1,13 @@
 package {{.ControllerPackage}}
 
-type {{.ControllerEntity}}Controller struct{}
+import "{{.ValidatorPackageImport}}"
 
-func New{{.ControllerEntity}}Controller() *{{.ControllerEntity}}Controller {
-	return &{{.ControllerEntity}}Controller{}
+type {{.ControllerEntity}}Controller struct{
+    validator *validator.Validator
+}
+
+func New{{.ControllerEntity}}Controller(validator *validator.Validator,) *{{.ControllerEntity}}Controller {
+	return &{{.ControllerEntity}}Controller{
+	    validator: validator,
+	}
 }
