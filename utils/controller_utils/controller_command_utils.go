@@ -536,38 +536,28 @@ func CreateController(controllerData *ControllerData) error {
 // AddServiceToController adds a service dependency to a controller struct and its constructor.
 // It updates the controller file's AST to add the service interface to the struct and constructor parameters.
 func AddServiceToController(controllerData *ControllerData) error {
-
 	servicePackageImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ServicesFolderPath)
 	servicePackage := strings.Split(servicePackageImport, "/")[len(strings.Split(servicePackageImport, "/"))-1]
 
 	fileSet := token.NewFileSet()
-	// Parse the file
 	node, err := parser.ParseFile(fileSet, controllerData.ControllerFilePath, nil, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	// Track if import already exists
+	// Add import if needed
 	importFound := false
 	for _, imp := range node.Imports {
-		impPath := strings.Trim(imp.Path.Value, `"`)
-		if impPath == servicePackageImport {
+		if strings.Trim(imp.Path.Value, `"`) == servicePackageImport {
 			importFound = true
 			break
 		}
 	}
-
-	// Add import if needed
 	if !importFound {
 		newImport := &ast.ImportSpec{
-			Path: &ast.BasicLit{
-				Kind:  token.STRING,
-				Value: fmt.Sprintf("%q", servicePackageImport),
-			},
+			Path: &ast.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", servicePackageImport)},
 		}
-
 		inserted := false
-		// Try to find existing import block
 		for _, decl := range node.Decls {
 			if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
 				genDecl.Specs = append(genDecl.Specs, newImport)
@@ -575,29 +565,21 @@ func AddServiceToController(controllerData *ControllerData) error {
 				break
 			}
 		}
-
 		if !inserted {
-			// No import block found, create one
-			importDecl := &ast.GenDecl{
+			node.Decls = append([]ast.Decl{&ast.GenDecl{
 				Tok: token.IMPORT,
 				Specs: []ast.Spec{
 					newImport,
 				},
-			}
-			// Insert it at the beginning of declarations
-			node.Decls = append([]ast.Decl{importDecl}, node.Decls...)
+			}}, node.Decls...)
 		}
 	}
 
-	// Track if we updated struct and constructor
 	structUpdated := false
 	constructorUpdated := false
 
-	// Walk the AST
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch x := n.(type) {
-
-		// Update the struct
 		case *ast.TypeSpec:
 			if x.Name.Name == controllerData.ControllerFullName {
 				if structType, ok := x.Type.(*ast.StructType); ok {
@@ -610,12 +592,9 @@ func AddServiceToController(controllerData *ControllerData) error {
 					structUpdated = true
 				}
 			}
-
-		// Update the constructor
 		case *ast.FuncDecl:
 			if x.Name.Name == "New"+controllerData.ControllerFullName {
 				for _, service := range controllerData.ServiceData {
-					// First: ensure the parameter is added if missing
 					paramExists := false
 					for _, param := range x.Type.Params.List {
 						for _, name := range param.Names {
@@ -628,7 +607,6 @@ func AddServiceToController(controllerData *ControllerData) error {
 							break
 						}
 					}
-
 					if !paramExists {
 						x.Type.Params.List = append(x.Type.Params.List, &ast.Field{
 							Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(service.ServiceFullName))},
@@ -638,8 +616,6 @@ func AddServiceToController(controllerData *ControllerData) error {
 							},
 						})
 					}
-
-					// Then: update the constructor body as you already did
 					if len(x.Body.List) > 0 {
 						if retStmt, ok := x.Body.List[0].(*ast.ReturnStmt); ok {
 							if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
@@ -664,17 +640,68 @@ func AddServiceToController(controllerData *ControllerData) error {
 		return fmt.Errorf("constructor New%sController not found", controllerData.ControllerEntity)
 	}
 
-	// Create the output file
 	outFile, err := os.Create(controllerData.ControllerFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to open file for writing: %w", err)
+		return fmt.Errorf("failed to open controller file for writing: %w", err)
 	}
 	defer outFile.Close()
+	if err := printer.Fprint(outFile, fileSet, node); err != nil {
+		return fmt.Errorf("failed to write updated controller file: %w", err)
+	}
 
-	// Write the modified AST back to the file
-	err = printer.Fprint(outFile, fileSet, node)
+	// Now update the CentralController constructor
+	centralControllerFilePath := path.Join(cli_config.CliConfig.ControllersFolderPath, "central_controller.go")
+	centralFileSet := token.NewFileSet()
+	centralNode, err := parser.ParseFile(centralFileSet, centralControllerFilePath, nil, parser.ParseComments)
 	if err != nil {
-		return fmt.Errorf("failed to write updated file: %w", err)
+		return fmt.Errorf("failed to parse central controller file: %w", err)
+	}
+
+	centralUpdated := false
+
+	ast.Inspect(centralNode, func(n ast.Node) bool {
+		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == "NewCentralController" {
+			for _, stmt := range fn.Body.List {
+				if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
+					if unaryExpr, ok := retStmt.Results[0].(*ast.UnaryExpr); ok {
+						if compositeLit, ok := unaryExpr.X.(*ast.CompositeLit); ok {
+							for _, elt := range compositeLit.Elts {
+								if kv, ok := elt.(*ast.KeyValueExpr); ok {
+									if callExpr, ok := kv.Value.(*ast.CallExpr); ok {
+										if ident, ok := callExpr.Fun.(*ast.Ident); ok {
+											for _, service := range controllerData.ServiceData {
+												expected := "New" + controllerData.ControllerFullName
+												if ident.Name == expected {
+													callExpr.Args = append(callExpr.Args, &ast.SelectorExpr{
+														X:   ast.NewIdent("centralService"),
+														Sel: ast.NewIdent(service.ServiceFullName),
+													})
+													centralUpdated = true
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	if !centralUpdated {
+		return fmt.Errorf("failed to update NewCentralController with New%sController arguments", controllerData.ControllerEntity)
+	}
+
+	outCentralFile, err := os.Create(centralControllerFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open central controller file for writing: %w", err)
+	}
+	defer outCentralFile.Close()
+	if err := printer.Fprint(outCentralFile, centralFileSet, centralNode); err != nil {
+		return fmt.Errorf("failed to write updated central controller file: %w", err)
 	}
 
 	return nil
