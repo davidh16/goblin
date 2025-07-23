@@ -378,44 +378,80 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 	}
 
 	servicePackageImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ServicesFolderPath)
-	servicePackage := path.Base(servicePackageImport)
-	validatorImport := "github.com/davidh16/goblin/validator"
-	validatorAlias := "validator"
 
-	// Add imports for services and validator if missing
-	importsNeeded := map[string]string{}
-	if controllerData.ServiceData != nil {
-		importsNeeded[servicePackageImport] = servicePackage
-	}
-	importsNeeded[validatorImport] = validatorAlias
-
-	for impPath, asName := range importsNeeded {
-		found := false
+	// Conditionally add the service import if needed
+	if len(controllerData.ServiceData) > 0 {
+		importFound := false
 		for _, imp := range node.Imports {
-			if strings.Trim(imp.Path.Value, `"`) == impPath {
-				found = true
+			if strings.Trim(imp.Path.Value, `"`) == servicePackageImport {
+				importFound = true
 				break
 			}
 		}
-		if !found {
-			newImp := &ast.ImportSpec{
-				Path: &ast.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", impPath)},
+
+		if !importFound {
+			newImport := &ast.ImportSpec{
+				Path: &ast.BasicLit{
+					Kind:  token.STRING,
+					Value: fmt.Sprintf("%q", servicePackageImport),
+				},
 			}
-			if asName != "" {
-				newImp.Name = ast.NewIdent(asName)
-			}
-			insertPos := -1
+
+			inserted := false
 			for _, decl := range node.Decls {
-				if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok == token.IMPORT {
-					gd.Specs = append(gd.Specs, newImp)
-					insertPos = -2
+				if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
+					genDecl.Specs = append(genDecl.Specs, newImport)
+					inserted = true
 					break
 				}
 			}
-			if insertPos == -1 {
-				imDecl := &ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{newImp}}
-				node.Decls = append([]ast.Decl{imDecl}, node.Decls...)
+
+			if !inserted {
+				importDecl := &ast.GenDecl{
+					Tok: token.IMPORT,
+					Specs: []ast.Spec{
+						newImport,
+					},
+				}
+				node.Decls = append([]ast.Decl{importDecl}, node.Decls...)
 			}
+		}
+	}
+
+	validatorImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ValidatorFolderPath)
+	validatorFound := false
+	for _, imp := range node.Imports {
+		if strings.Trim(imp.Path.Value, `"`) == validatorImport {
+			validatorFound = true
+			break
+		}
+	}
+
+	if !validatorFound {
+		newImport := &ast.ImportSpec{
+			Path: &ast.BasicLit{
+				Kind:  token.STRING,
+				Value: fmt.Sprintf("%q", validatorImport),
+			},
+		}
+
+		inserted := false
+		for _, decl := range node.Decls {
+			if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
+				genDecl.Specs = append(genDecl.Specs, newImport)
+				inserted = true
+				break
+			}
+		}
+
+		if !inserted {
+			importDecl := &ast.GenDecl{
+				Tok: token.IMPORT,
+				Specs: []ast.Spec{
+					newImport,
+				},
+			}
+			node.Decls = append([]ast.Decl{importDecl}, node.Decls...)
 		}
 	}
 
@@ -433,7 +469,7 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == constructorName {
 			var consArgs []ast.Expr
 
-			// Inject validator instantiation at the top
+			// Ensure validator is declared (if not already)
 			declared := false
 			for _, stmt := range fn.Body.List {
 				if asn, ok := stmt.(*ast.AssignStmt); ok {
@@ -449,7 +485,7 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 					Tok: token.DEFINE,
 					Rhs: []ast.Expr{&ast.CallExpr{
 						Fun: &ast.SelectorExpr{
-							X:   ast.NewIdent(validatorAlias),
+							X:   ast.NewIdent("validator"),
 							Sel: ast.NewIdent("NewValidator"),
 						},
 					}},
@@ -457,7 +493,7 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 				fn.Body.List = append([]ast.Stmt{declStmt}, fn.Body.List...)
 			}
 
-			// Collect service args
+			// Collect service args if any
 			if controllerData.ServiceData != nil {
 				for _, svc := range controllerData.ServiceData {
 					consArgs = append(consArgs, &ast.SelectorExpr{
@@ -469,7 +505,7 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 			// Always add validator
 			consArgs = append(consArgs, ast.NewIdent("validator"))
 
-			// Update return composite-literal
+			// Update return statement
 			if ret, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok {
 				if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok {
 					if cl, ok := ul.X.(*ast.CompositeLit); ok {
