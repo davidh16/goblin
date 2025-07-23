@@ -214,22 +214,23 @@ func repoCmdHandler() {
 		}
 	}
 
-	var toInjectRepoToService bool
-	injectPrompt := &survey.Confirm{
-		Message: "Do you wish to inject this repo to a service ?",
-		Default: true,
-	}
-	err = survey.AskOne(injectPrompt, &toInjectRepoToService)
+	existingServices, err := controller_utils.ListExistingServices()
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Unable to list existing services")
+	}
+	var toInjectRepoToService bool
+	if len(existingServices) > 0 {
+		injectPrompt := &survey.Confirm{
+			Message: "Do you wish to inject this repo to a service ?",
+			Default: true,
+		}
+		err = survey.AskOne(injectPrompt, &toInjectRepoToService)
+		if err != nil {
+			utils.HandleError(err)
+		}
 	}
 
 	if toInjectRepoToService {
-
-		existingServices, err := controller_utils.ListExistingServices()
-		if err != nil {
-			utils.HandleError(err, "Unable to list existing services")
-		}
 		existingServicesMap := make(map[string]*service_utils.ServiceData)
 		for _, existingService := range existingServices {
 			existingService.RepoData = []repo_utils.RepoData{*repoData}

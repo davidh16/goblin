@@ -734,6 +734,57 @@ func AddRepoToService(serviceData *ServiceData) error {
 		return fmt.Errorf("failed to write updated file: %w", err)
 	}
 
+	// 🔥 Now update CentralService constructor
+	centralServiceFilePath := path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go")
+	centralFileSet := token.NewFileSet()
+	centralNode, err := parser.ParseFile(centralFileSet, centralServiceFilePath, nil, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("failed to parse central service file: %w", err)
+	}
+
+	centralUpdated := false
+
+	ast.Inspect(centralNode, func(n ast.Node) bool {
+		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == "NewCentralService" {
+			for _, stmt := range fn.Body.List {
+				if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
+					if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
+						for _, elt := range compositeLit.Elts {
+							if kv, ok := elt.(*ast.KeyValueExpr); ok {
+								if sel, ok := kv.Value.(*ast.CallExpr); ok {
+									if funSel, ok := sel.Fun.(*ast.Ident); ok && funSel.Name == "New"+serviceData.ServiceFullName {
+										for _, repo := range serviceData.RepoData {
+											sel.Args = append(sel.Args, &ast.SelectorExpr{
+												X:   ast.NewIdent("centralRepo"),
+												Sel: ast.NewIdent(repo.RepoFullName),
+											})
+										}
+										centralUpdated = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+
+	if !centralUpdated {
+		return fmt.Errorf("failed to update NewCentralService constructor call to New%s", serviceData.ServiceFullName)
+	}
+
+	outCentralFile, err := os.Create(centralServiceFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to open central service file for writing: %w", err)
+	}
+	defer outCentralFile.Close()
+
+	if err := printer.Fprint(outCentralFile, centralFileSet, centralNode); err != nil {
+		return fmt.Errorf("failed to write updated central service file: %w", err)
+	}
+
 	return nil
 }
 

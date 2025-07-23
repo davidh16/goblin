@@ -250,22 +250,23 @@ func serviceCmdHandler() {
 		}
 	}
 
-	var toInjectServiceToController bool
-	injectPrompt := &survey.Confirm{
-		Message: "Do you wish to inject this service to a controller ?",
-		Default: true,
-	}
-	err = survey.AskOne(injectPrompt, &toInjectServiceToController)
+	existingControllers, err := controller_utils.ListExistingControllers()
 	if err != nil {
-		utils.HandleError(err)
+		utils.HandleError(err, "Unable to list existing services")
+	}
+	var toInjectServiceToController bool
+	if len(existingControllers) > 0 {
+		injectPrompt := &survey.Confirm{
+			Message: "Do you wish to inject this service to a controller ?",
+			Default: true,
+		}
+		err = survey.AskOne(injectPrompt, &toInjectServiceToController)
+		if err != nil {
+			utils.HandleError(err)
+		}
 	}
 
 	if toInjectServiceToController {
-
-		existingControllers, err := controller_utils.ListExistingControllers()
-		if err != nil {
-			utils.HandleError(err, "Unable to list existing services")
-		}
 		existingControllersMap := make(map[string]*controller_utils.ControllerData)
 		for _, existingController := range existingControllers {
 			existingController.ServiceData = []service_utils.ServiceData{*serviceData}
