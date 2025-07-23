@@ -1,10 +1,12 @@
 package repo_utils
 
 import (
+	"github.com/davidh16/goblin/cli_config"
 	"github.com/davidh16/goblin/utils"
 	"github.com/jinzhu/inflection"
 	"go/ast"
 	"go/token"
+	"strings"
 )
 
 //////// bodies
@@ -199,11 +201,91 @@ var generateListAllMethodBody = func(modelPascalCase, modelDataType string) []as
 	}
 }
 
-var generateListWithPaginationMethodBody = func(model string) []ast.Stmt {
+var generateListWithPaginationMethodBody = func(modelPascalCase string) []ast.Stmt {
+	sliceName := inflection.Plural(utils.PascalToCamel(modelPascalCase))
+
 	return []ast.Stmt{
+		// var users []models.User
+		&ast.DeclStmt{
+			Decl: &ast.GenDecl{
+				Tok: token.VAR,
+				Specs: []ast.Spec{
+					&ast.ValueSpec{
+						Names: []*ast.Ident{ast.NewIdent(sliceName)},
+						Type: &ast.ArrayType{
+							Elt: &ast.SelectorExpr{
+								X:   ast.NewIdent("models"),
+								Sel: ast.NewIdent(modelPascalCase),
+							},
+						},
+					},
+				},
+			},
+		},
+		// err := r.db.Scopes(databases.Paginate(users, pagination, r.db)).Find(&users).Error
+		&ast.AssignStmt{
+			Lhs: []ast.Expr{ast.NewIdent("err")},
+			Tok: token.DEFINE,
+			Rhs: []ast.Expr{
+				&ast.SelectorExpr{
+					X: &ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X: &ast.CallExpr{
+								Fun: &ast.SelectorExpr{
+									X:   &ast.SelectorExpr{X: ast.NewIdent("r"), Sel: ast.NewIdent("db")},
+									Sel: ast.NewIdent("Scopes"),
+								},
+								Args: []ast.Expr{
+									&ast.CallExpr{
+										Fun: &ast.SelectorExpr{
+											X:   ast.NewIdent("databases"),
+											Sel: ast.NewIdent("Paginate"),
+										},
+										Args: []ast.Expr{
+											ast.NewIdent(sliceName),
+											ast.NewIdent("pagination"),
+											&ast.SelectorExpr{X: ast.NewIdent("r"), Sel: ast.NewIdent("db")},
+										},
+									},
+								},
+							},
+							Sel: ast.NewIdent("Find"),
+						},
+						Args: []ast.Expr{
+							&ast.UnaryExpr{
+								Op: token.AND,
+								X:  ast.NewIdent(sliceName),
+							},
+						},
+					},
+					Sel: ast.NewIdent("Error"),
+				},
+			},
+		},
+		// if err != nil {
+		//    return nil, err
+		// }
+		&ast.IfStmt{
+			Cond: &ast.BinaryExpr{
+				X:  ast.NewIdent("err"),
+				Op: token.NEQ,
+				Y:  ast.NewIdent("nil"),
+			},
+			Body: &ast.BlockStmt{
+				List: []ast.Stmt{
+					&ast.ReturnStmt{
+						Results: []ast.Expr{
+							ast.NewIdent("nil"),
+							ast.NewIdent("err"),
+						},
+					},
+				},
+			},
+		},
+		// return users, nil
 		&ast.ReturnStmt{
 			Results: []ast.Expr{
-				ast.NewIdent("nil"),
+				ast.NewIdent(sliceName),
 				ast.NewIdent("nil"),
 			},
 		},
@@ -288,7 +370,7 @@ func generateMethodBody(repoMethod Method, modelPascalCase, modelDataType string
 	case ListAll:
 		return generateListAllMethodBody(modelPascalCase, modelDataType)
 	case ListWithPagination:
-		return generateListWithPaginationMethodBody(utils.PascalToCamel(modelPascalCase))
+		return generateListWithPaginationMethodBody(modelPascalCase)
 	case GetByUuid:
 		return generateGetByUuidMethodBody(modelPascalCase, modelDataType)
 	default:
@@ -337,7 +419,18 @@ var generateListAllMethodParams = func() []*ast.Field {
 }
 
 var generateListWithPaginationMethodParams = func() []*ast.Field {
-	return []*ast.Field{}
+	databasesPackage := strings.Split(cli_config.CliConfig.DatabaseInstancesFolderPath, "/")[len(strings.Split(cli_config.CliConfig.DatabaseInstancesFolderPath, "/"))-1]
+	return []*ast.Field{
+		{
+			Names: []*ast.Ident{ast.NewIdent("pagination")},
+			Type: &ast.StarExpr{
+				X: &ast.SelectorExpr{
+					X:   ast.NewIdent(databasesPackage),
+					Sel: ast.NewIdent("Pagination"),
+				},
+			},
+		},
+	}
 }
 
 var generateGetByUuidMethodParams = func() []*ast.Field {

@@ -287,17 +287,33 @@ func AddMethodsToRepo(repoData *RepoData, wantedRepoMethods []Method) error {
 	modelsPackage := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ModelsFolderPath)
 	quotedModelsPackage := strconv.Quote(modelsPackage)
 
-	importSpec := &ast.ImportSpec{
+	modelImportSpec := &ast.ImportSpec{
 		Path: &ast.BasicLit{
 			Kind:  token.STRING,
 			Value: quotedModelsPackage,
 		},
 	}
 
-	var importAdded bool
+	// Prepare databases import path
+	databasesPackage := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.DatabaseInstancesFolderPath)
+	quotedDatabasesPackage := strconv.Quote(databasesPackage)
+
+	databasesImportSpec := &ast.ImportSpec{
+		Path: &ast.BasicLit{
+			Kind:  token.STRING,
+			Value: quotedDatabasesPackage,
+		},
+	}
+
+	var databasesImportAdded bool
+	var modelsImportAdded bool
 
 	// Check if import block exists and append to it
 	for _, decl := range node.Decls {
+		if databasesImportAdded && modelsImportAdded {
+			break
+		}
+
 		genDecl, ok := decl.(*ast.GenDecl)
 		if !ok || genDecl.Tok != token.IMPORT {
 			continue
@@ -306,26 +322,38 @@ func AddMethodsToRepo(repoData *RepoData, wantedRepoMethods []Method) error {
 		// Check if already imported
 		for _, spec := range genDecl.Specs {
 			if importSpecTyped, ok := spec.(*ast.ImportSpec); ok && importSpecTyped.Path.Value == quotedModelsPackage {
-				importAdded = true
-				break
+				modelsImportAdded = true
+			}
+			if importSpecTyped, ok := spec.(*ast.ImportSpec); ok && importSpecTyped.Path.Value == quotedDatabasesPackage {
+				databasesImportAdded = true
 			}
 		}
 
 		// Append to existing import block if not present
-		if !importAdded {
-			genDecl.Specs = append(genDecl.Specs, importSpec)
-			importAdded = true
-			break
+		if !modelsImportAdded {
+			genDecl.Specs = append(genDecl.Specs, modelImportSpec)
+			modelsImportAdded = true
+		}
+
+		// Append to existing import block if not present
+		if !databasesImportAdded {
+			genDecl.Specs = append(genDecl.Specs, databasesImportSpec)
+			databasesImportAdded = true
 		}
 	}
 
 	// If no import block exists, create a new one at the top
-	if !importAdded {
+	if !modelsImportAdded || !databasesImportAdded {
+		newSpecs := []ast.Spec{}
+		if !modelsImportAdded {
+			newSpecs = append(newSpecs, modelImportSpec)
+		}
+		if !databasesImportAdded {
+			newSpecs = append(newSpecs, databasesImportSpec)
+		}
 		newImportDecl := &ast.GenDecl{
-			Tok: token.IMPORT,
-			Specs: []ast.Spec{
-				importSpec,
-			},
+			Tok:   token.IMPORT,
+			Specs: newSpecs,
 		}
 		node.Decls = append([]ast.Decl{newImportDecl}, node.Decls...)
 	}
