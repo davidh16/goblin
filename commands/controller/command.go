@@ -98,9 +98,10 @@ func controllerCmdHandler() {
 	if err != nil {
 		utils.HandleError(err, "Unable to list existing services")
 	}
-	existingServicesMap := make(map[string]*service_utils.ServiceData)
-	for _, existingService := range existingServices {
-		existingServicesMap[existingService.ServiceFullName] = &existingService
+	existingServicesMap := make(map[string]*service_utils.ServiceData, len(existingServices))
+	for i := range existingServices {
+		svc := &existingServices[i] // pointer to the real slice element
+		existingServicesMap[svc.ServiceFullName] = svc
 	}
 
 	// controller_utils.ServiceOptionsStrategyMap keys are used to list options for choosing service strategy, if there are no existing services, that key (option) has to be removed from the map

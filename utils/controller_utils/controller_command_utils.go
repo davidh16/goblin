@@ -462,13 +462,11 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 					Names: []*ast.Ident{ast.NewIdent(controllerData.ControllerFullName)},
 					Type:  ast.NewIdent(attributeDataType),
 				})
-				st.Fields.Opening = token.Pos(1)
+				//st.Fields.Opening = token.Pos(1)
 			}
 		}
 
 		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == constructorName {
-			var consArgs []ast.Expr
-
 			// Ensure validator is declared (if not already)
 			declared := false
 			for _, stmt := range fn.Body.List {
@@ -493,29 +491,51 @@ func AddNewControllerToCentralController(controllerData *ControllerData) error {
 				fn.Body.List = append([]ast.Stmt{declStmt}, fn.Body.List...)
 			}
 
-			// Collect service args if any
+			// Build constructor args: validator FIRST, then unique services (in order)
+			consArgs := []ast.Expr{ast.NewIdent("validator")}
 			if controllerData.ServiceData != nil {
+				seen := map[string]struct{}{}
 				for _, svc := range controllerData.ServiceData {
+					if _, dup := seen[svc.ServiceFullName]; dup {
+						continue
+					}
+					seen[svc.ServiceFullName] = struct{}{}
 					consArgs = append(consArgs, &ast.SelectorExpr{
 						X:   ast.NewIdent("centralService"),
 						Sel: ast.NewIdent(svc.ServiceFullName),
 					})
 				}
 			}
-			// Always add validator
-			consArgs = append(consArgs, ast.NewIdent("validator"))
 
-			// Update return statement
-			if ret, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok {
-				if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok {
+			// Update or append field in the &CentralController{ ... } return
+			if ret, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok && len(ret.Results) > 0 {
+				if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok { // &CentralController{...}
 					if cl, ok := ul.X.(*ast.CompositeLit); ok {
-						cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
-							Key: ast.NewIdent(controllerData.ControllerFullName),
-							Value: &ast.CallExpr{
-								Fun:  ast.NewIdent(controllerConstructor),
-								Args: consArgs,
-							},
-						})
+						// Try to replace existing TestController: ... entry
+						replaced := false
+						for i, elt := range cl.Elts {
+							if kv, ok := elt.(*ast.KeyValueExpr); ok {
+								if key, ok := kv.Key.(*ast.Ident); ok && key.Name == controllerData.ControllerFullName {
+									kv.Value = &ast.CallExpr{
+										Fun:  ast.NewIdent(controllerConstructor),
+										Args: consArgs,
+									}
+									cl.Elts[i] = kv
+									replaced = true
+									break
+								}
+							}
+						}
+						// If not present, append it
+						if !replaced {
+							cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+								Key: ast.NewIdent(controllerData.ControllerFullName),
+								Value: &ast.CallExpr{
+									Fun:  ast.NewIdent(controllerConstructor),
+									Args: consArgs,
+								},
+							})
+						}
 					}
 				}
 			}
@@ -645,23 +665,39 @@ func AddServiceToController(controllerData *ControllerData) error {
 		switch x := n.(type) {
 		case *ast.TypeSpec:
 			if x.Name.Name == controllerData.ControllerFullName {
-				if structType, ok := x.Type.(*ast.StructType); ok {
-					for _, service := range controllerData.ServiceData {
-						structType.Fields.List = append(structType.Fields.List, &ast.Field{
-							Names: []*ast.Ident{ast.NewIdent(service.ServiceFullName)},
-							Type:  ast.NewIdent(servicePackage + "." + service.ServiceFullName + "Interface"),
-						})
+				if st, ok := x.Type.(*ast.StructType); ok {
+					for _, svc := range controllerData.ServiceData {
+						// avoid duplicate struct fields
+						exists := false
+						for _, f := range st.Fields.List {
+							for _, nm := range f.Names {
+								if nm.Name == svc.ServiceFullName {
+									exists = true
+									break
+								}
+							}
+							if exists {
+								break
+							}
+						}
+						if !exists {
+							st.Fields.List = append(st.Fields.List, &ast.Field{
+								Names: []*ast.Ident{ast.NewIdent(svc.ServiceFullName)},
+								Type:  ast.NewIdent(servicePackage + "." + svc.ServiceFullName + "Interface"),
+							})
+						}
 					}
 					structUpdated = true
 				}
 			}
 		case *ast.FuncDecl:
 			if x.Name.Name == "New"+controllerData.ControllerFullName {
-				for _, service := range controllerData.ServiceData {
+				// params (you already dedupe; keep your code)
+				for _, svc := range controllerData.ServiceData {
 					paramExists := false
-					for _, param := range x.Type.Params.List {
-						for _, name := range param.Names {
-							if name.Name == utils.PascalToCamel(service.ServiceFullName) {
+					for _, p := range x.Type.Params.List {
+						for _, name := range p.Names {
+							if name.Name == utils.PascalToCamel(svc.ServiceFullName) {
 								paramExists = true
 								break
 							}
@@ -672,22 +708,45 @@ func AddServiceToController(controllerData *ControllerData) error {
 					}
 					if !paramExists {
 						x.Type.Params.List = append(x.Type.Params.List, &ast.Field{
-							Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(service.ServiceFullName))},
+							Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(svc.ServiceFullName))},
 							Type: &ast.SelectorExpr{
 								X:   ast.NewIdent(servicePackage),
-								Sel: ast.NewIdent(service.ServiceFullName + "Interface"),
+								Sel: ast.NewIdent(svc.ServiceFullName + "Interface"),
 							},
 						})
 					}
-					if len(x.Body.List) > 0 {
-						if retStmt, ok := x.Body.List[0].(*ast.ReturnStmt); ok {
-							if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
-								compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
-									Key:   ast.NewIdent(service.ServiceFullName),
-									Value: ast.NewIdent(utils.PascalToCamel(service.ServiceFullName)),
-								})
-								constructorUpdated = true
+				}
+
+				// return &MyController{ ... } — replace or append Key:Value once
+				var ret *ast.ReturnStmt
+				for i := len(x.Body.List) - 1; i >= 0; i-- {
+					if r, ok := x.Body.List[i].(*ast.ReturnStmt); ok {
+						ret = r
+						break
+					}
+				}
+				if ret != nil && len(ret.Results) > 0 {
+					if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok {
+						if cl, ok := ul.X.(*ast.CompositeLit); ok {
+							for _, svc := range controllerData.ServiceData {
+								key := svc.ServiceFullName
+								val := ast.NewIdent(utils.PascalToCamel(svc.ServiceFullName))
+								replaced := false
+								for i, elt := range cl.Elts {
+									if kv, ok := elt.(*ast.KeyValueExpr); ok {
+										if id, ok := kv.Key.(*ast.Ident); ok && id.Name == key {
+											kv.Value = val
+											cl.Elts[i] = kv
+											replaced = true
+											break
+										}
+									}
+								}
+								if !replaced {
+									cl.Elts = append(cl.Elts, &ast.KeyValueExpr{Key: ast.NewIdent(key), Value: val})
+								}
 							}
+							constructorUpdated = true
 						}
 					}
 				}
@@ -723,33 +782,94 @@ func AddServiceToController(controllerData *ControllerData) error {
 	centralUpdated := false
 
 	ast.Inspect(centralNode, func(n ast.Node) bool {
-		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == "NewCentralController" {
-			for _, stmt := range fn.Body.List {
-				if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
-					if unaryExpr, ok := retStmt.Results[0].(*ast.UnaryExpr); ok {
-						if compositeLit, ok := unaryExpr.X.(*ast.CompositeLit); ok {
-							for _, elt := range compositeLit.Elts {
-								if kv, ok := elt.(*ast.KeyValueExpr); ok {
-									if callExpr, ok := kv.Value.(*ast.CallExpr); ok {
-										if ident, ok := callExpr.Fun.(*ast.Ident); ok {
-											for _, service := range controllerData.ServiceData {
-												expected := "New" + controllerData.ControllerFullName
-												if ident.Name == expected {
-													callExpr.Args = append(callExpr.Args, &ast.SelectorExpr{
-														X:   ast.NewIdent("centralService"),
-														Sel: ast.NewIdent(service.ServiceFullName),
-													})
-													centralUpdated = true
-												}
-											}
-										}
-									}
-								}
-							}
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "NewCentralController" {
+			return true
+		}
+
+		// find the return &CentralController{ ... }
+		var ret *ast.ReturnStmt
+		for i := len(fn.Body.List) - 1; i >= 0; i-- {
+			if r, ok := fn.Body.List[i].(*ast.ReturnStmt); ok {
+				ret = r
+				break
+			}
+		}
+		if ret == nil || len(ret.Results) == 0 {
+			return true
+		}
+
+		ul, ok := ret.Results[0].(*ast.UnaryExpr)
+		if !ok {
+			return true
+		}
+		cl, ok := ul.X.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		// find Key: New<Controller>(...)
+		fieldName := controllerData.ControllerFullName
+		for _, elt := range cl.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			keyIdent, ok := kv.Key.(*ast.Ident)
+			if !ok || keyIdent.Name != fieldName {
+				continue
+			}
+
+			call, ok := kv.Value.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+
+			// rebuild args: validator first (once), then unique centralService.<Svc> (including the newly added one)
+			haveValidator := false
+			seen := map[string]struct{}{}
+			newArgs := make([]ast.Expr, 0, len(call.Args)+len(controllerData.ServiceData)+1)
+
+			// keep validator if present
+			for _, a := range call.Args {
+				if id, ok := a.(*ast.Ident); ok && id.Name == "validator" {
+					if !haveValidator {
+						newArgs = append(newArgs, id)
+						haveValidator = true
+					}
+				}
+			}
+			if !haveValidator {
+				newArgs = append(newArgs, ast.NewIdent("validator"))
+			}
+
+			// keep existing unique centralService.<Svc> args
+			for _, a := range call.Args {
+				if sel, ok := a.(*ast.SelectorExpr); ok {
+					if x, ok := sel.X.(*ast.Ident); ok && x.Name == "centralService" {
+						name := sel.Sel.Name
+						if _, ok := seen[name]; !ok {
+							seen[name] = struct{}{}
+							newArgs = append(newArgs, a)
 						}
 					}
 				}
 			}
+
+			// ensure the current service(s) are included (add if missing)
+			for _, svc := range controllerData.ServiceData {
+				if _, ok := seen[svc.ServiceFullName]; !ok {
+					seen[svc.ServiceFullName] = struct{}{}
+					newArgs = append(newArgs, &ast.SelectorExpr{
+						X:   ast.NewIdent("centralService"),
+						Sel: ast.NewIdent(svc.ServiceFullName),
+					})
+				}
+			}
+
+			call.Args = newArgs
+			centralUpdated = true
+			break
 		}
 		return true
 	})

@@ -413,12 +413,9 @@ func GenerateImplementProxyMethodsNowQuestionWithExistingRepoMethodsPreview(repo
 
 }
 
-// AddNewServiceToCentralService updates the central_service.go file by injecting a new
-// service interface as a field into the CentralService struct, and wiring it
-// through the constructor NewCentralService.
-//
-// It automatically converts the given snake_case service name into PascalCase
-// to follow Go naming conventions for attributes and types.
+// AddNewServiceToCentralService updates central_service.go: injects a new service field
+// into CentralService and wires it through NewCentralService. It deduplicates repo args
+// and is idempotent (re-runs won't duplicate fields or constructor entries).
 func AddNewServiceToCentralService(serviceData *ServiceData) error {
 	centralServiceFilePath := path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go")
 	const structName = "CentralService"
@@ -434,78 +431,74 @@ func AddNewServiceToCentralService(serviceData *ServiceData) error {
 	}
 
 	repoPackageImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.RepositoriesFolderPath)
-	repoPackage := strings.Split(repoPackageImport, "/")[len(strings.Split(repoPackageImport, "/"))-1]
+	repoPackage := func() string {
+		parts := strings.Split(repoPackageImport, "/")
+		return parts[len(parts)-1]
+	}()
 
-	// if serviceData.RepoData != nil that means we are adding a new repo, therefore we should also add imports if needed, if we have no implemented repo, we can skip this step
-	if serviceData.RepoData != nil {
-		// Track if import already exists
-		importFound := false
+	// Import repos package only if needed and missing
+	if serviceData.RepoData != nil && len(serviceData.RepoData) > 0 {
+		found := false
 		for _, imp := range node.Imports {
-			impPath := strings.Trim(imp.Path.Value, `"`)
-			if impPath == repoPackageImport {
-				importFound = true
+			if strings.Trim(imp.Path.Value, `""`) == repoPackageImport {
+				found = true
 				break
 			}
 		}
-
-		// Add import if needed
-		if !importFound {
+		if !found {
 			newImport := &ast.ImportSpec{
-				Path: &ast.BasicLit{
-					Kind:  token.STRING,
-					Value: fmt.Sprintf("%q", repoPackageImport),
-				},
+				Path: &ast.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", repoPackageImport)},
 			}
-
 			inserted := false
 			for _, decl := range node.Decls {
-				if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
-					genDecl.Specs = append(genDecl.Specs, newImport)
+				if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.IMPORT {
+					gen.Specs = append(gen.Specs, newImport)
 					inserted = true
 					break
 				}
 			}
-
 			if !inserted {
-				importDecl := &ast.GenDecl{
-					Tok: token.IMPORT,
-					Specs: []ast.Spec{
-						newImport,
-					},
-				}
-				node.Decls = append([]ast.Decl{importDecl}, node.Decls...)
+				node.Decls = append([]ast.Decl{
+					&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{newImport}},
+				}, node.Decls...)
 			}
 		}
 	}
 
 	ast.Inspect(node, func(n ast.Node) bool {
-		if gen, ok := n.(*ast.TypeSpec); ok && gen.Name.Name == structName {
-			if structType, ok := gen.Type.(*ast.StructType); ok {
-				structType.Fields.List = append(structType.Fields.List, &ast.Field{
-					Names: []*ast.Ident{ast.NewIdent(serviceData.ServiceFullName)},
-					Type:  ast.NewIdent(attributeDataType),
-				})
-				structType.Fields.Opening = token.Pos(1)
+		// Add struct field if not already there
+		if ts, ok := n.(*ast.TypeSpec); ok && ts.Name.Name == structName {
+			if st, ok := ts.Type.(*ast.StructType); ok {
+				already := false
+				for _, f := range st.Fields.List {
+					for _, name := range f.Names {
+						if name.Name == serviceData.ServiceFullName {
+							already = true
+							break
+						}
+					}
+					if already {
+						break
+					}
+				}
+				if !already {
+					st.Fields.List = append(st.Fields.List, &ast.Field{
+						Names: []*ast.Ident{ast.NewIdent(serviceData.ServiceFullName)},
+						Type:  ast.NewIdent(attributeDataType),
+					})
+				}
+				// st.Fields.Opening = token.Pos(1) // ← not needed
 			}
 		}
 
+		// Mutate NewCentralService
 		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == constructorName {
-
-			var constructorArgs []ast.Expr
-			for _, repoData := range serviceData.RepoData {
-
-				constructorArgs = append(constructorArgs, &ast.SelectorExpr{
-					X:   ast.NewIdent("centralRepo"),
-					Sel: ast.NewIdent(repoData.RepoFullName),
-				})
-
-				paramValue := "centralRepo"
-				receiverType := "CentralRepo"
-
+			// Ensure parameter *repos.CentralRepo exists if service needs repos
+			if serviceData.RepoData != nil && len(serviceData.RepoData) > 0 {
 				paramExists := false
-				for _, param := range fn.Type.Params.List {
-					for _, name := range param.Names {
-						if name.Name == utils.PascalToCamel(paramValue) {
+				for _, p := range fn.Type.Params.List {
+					for _, name := range p.Names {
+						if name.Name == "centralRepo" {
 							paramExists = true
 							break
 						}
@@ -514,34 +507,68 @@ func AddNewServiceToCentralService(serviceData *ServiceData) error {
 						break
 					}
 				}
-
-				if !paramExists && serviceData.RepoData != nil {
+				if !paramExists {
 					fn.Type.Params.List = append(fn.Type.Params.List, &ast.Field{
-						Names: []*ast.Ident{ast.NewIdent(paramValue)},
+						Names: []*ast.Ident{ast.NewIdent("centralRepo")},
 						Type: &ast.StarExpr{
 							X: &ast.SelectorExpr{
 								X:   ast.NewIdent(repoPackage),
-								Sel: ast.NewIdent(receiverType),
+								Sel: ast.NewIdent("CentralRepo"),
 							},
 						},
 					})
 				}
 			}
 
-			// if service has no repo implementation, constructorArgs will be empty
-			if retStmt, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok {
-				if compLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
-					compLit.Elts = append(compLit.Elts, &ast.KeyValueExpr{
-						Key: ast.NewIdent(serviceData.ServiceFullName),
-						Value: &ast.CallExpr{
-							Fun:  ast.NewIdent(serviceConstructor),
-							Args: constructorArgs, // 🔥 dynamic argument list
-						},
+			// Build constructor args: unique repos in order (no duplicates)
+			constructorArgs := []ast.Expr{}
+			if serviceData.RepoData != nil {
+				seen := map[string]struct{}{}
+				for _, rd := range serviceData.RepoData {
+					if _, dup := seen[rd.RepoFullName]; dup {
+						continue
+					}
+					seen[rd.RepoFullName] = struct{}{}
+					constructorArgs = append(constructorArgs, &ast.SelectorExpr{
+						X:   ast.NewIdent("centralRepo"),
+						Sel: ast.NewIdent(rd.RepoFullName),
 					})
 				}
 			}
-		}
 
+			// Update or append the field in the return &CentralService{ ... }
+			if len(fn.Body.List) > 0 {
+				if ret, ok := fn.Body.List[len(fn.Body.List)-1].(*ast.ReturnStmt); ok && len(ret.Results) > 0 {
+					if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok {
+						if cl, ok := ul.X.(*ast.CompositeLit); ok {
+							replaced := false
+							for i, elt := range cl.Elts {
+								if kv, ok := elt.(*ast.KeyValueExpr); ok {
+									if key, ok := kv.Key.(*ast.Ident); ok && key.Name == serviceData.ServiceFullName {
+										kv.Value = &ast.CallExpr{
+											Fun:  ast.NewIdent(serviceConstructor),
+											Args: constructorArgs,
+										}
+										cl.Elts[i] = kv
+										replaced = true
+										break
+									}
+								}
+							}
+							if !replaced {
+								cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+									Key: ast.NewIdent(serviceData.ServiceFullName),
+									Value: &ast.CallExpr{
+										Fun:  ast.NewIdent(serviceConstructor),
+										Args: constructorArgs,
+									},
+								})
+							}
+						}
+					}
+				}
+			}
+		}
 		return true
 	})
 
@@ -552,10 +579,7 @@ func AddNewServiceToCentralService(serviceData *ServiceData) error {
 	defer outFile.Close()
 
 	cfg := &printer.Config{Mode: printer.UseSpaces | printer.TabIndent, Tabwidth: 4}
-	if err = cfg.Fprint(outFile, fileSet, node); err != nil {
-		return err
-	}
-	return nil
+	return cfg.Fprint(outFile, fileSet, node)
 }
 
 // CreateService generates a new service Go file from a predefined template.
@@ -587,126 +611,149 @@ func CreateService(serviceData *ServiceData) error {
 	return nil
 }
 
-// AddRepoToService adds a repository dependency to a service struct and its constructor.
-// It updates the service file's AST to add the repo interface to the struct and constructor parameters.
+// AddRepoToService adds repository dependencies to a service (struct, constructor, return literal)
+// and updates the central wiring. All updates are idempotent.
 func AddRepoToService(serviceData *ServiceData) error {
-
 	repoPackageImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.RepositoriesFolderPath)
-	repoPackage := strings.Split(repoPackageImport, "/")[len(strings.Split(repoPackageImport, "/"))-1]
+	repoPackage := func() string {
+		parts := strings.Split(repoPackageImport, "/")
+		return parts[len(parts)-1]
+	}()
 
 	fileSet := token.NewFileSet()
-	// Parse the file
 	node, err := parser.ParseFile(fileSet, serviceData.ServiceFilePath, nil, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse file: %w", err)
 	}
 
-	// Track if import already exists
-	importFound := false
+	// ensure import once
+	hasImport := false
 	for _, imp := range node.Imports {
-		impPath := strings.Trim(imp.Path.Value, `"`)
-		if impPath == repoPackageImport {
-			importFound = true
+		if strings.Trim(imp.Path.Value, `"`) == repoPackageImport {
+			hasImport = true
 			break
 		}
 	}
-
-	// Add import if needed
-	if !importFound {
-		newImport := &ast.ImportSpec{
-			Path: &ast.BasicLit{
-				Kind:  token.STRING,
-				Value: fmt.Sprintf("%q", repoPackageImport),
-			},
-		}
-
+	if !hasImport {
+		newImp := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", repoPackageImport)}}
 		inserted := false
-		// Try to find existing import block
-		for _, decl := range node.Decls {
-			if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
-				genDecl.Specs = append(genDecl.Specs, newImport)
+		for _, d := range node.Decls {
+			if g, ok := d.(*ast.GenDecl); ok && g.Tok == token.IMPORT {
+				g.Specs = append(g.Specs, newImp)
 				inserted = true
 				break
 			}
 		}
-
 		if !inserted {
-			// No import block found, create one
-			importDecl := &ast.GenDecl{
-				Tok: token.IMPORT,
-				Specs: []ast.Spec{
-					newImport,
-				},
-			}
-			// Insert it at the beginning of declarations
-			node.Decls = append([]ast.Decl{importDecl}, node.Decls...)
+			node.Decls = append([]ast.Decl{
+				&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{newImp}},
+			}, node.Decls...)
 		}
 	}
 
-	// Track if we updated struct and constructor
 	structUpdated := false
 	constructorUpdated := false
 
-	// Walk the AST
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch x := n.(type) {
 
-		// Update the struct
+		// --- struct: add missing fields only
 		case *ast.TypeSpec:
-			if x.Name.Name == serviceData.ServiceFullName {
-				if structType, ok := x.Type.(*ast.StructType); ok {
-					for _, repo := range serviceData.RepoData {
-						structType.Fields.List = append(structType.Fields.List, &ast.Field{
-							Names: []*ast.Ident{ast.NewIdent(repo.RepoFullName)},
-							Type:  ast.NewIdent(repoPackage + "." + repo.RepoFullName + "Interface"),
-						})
-						structUpdated = true
-					}
-				}
+			if x.Name.Name != serviceData.ServiceFullName {
+				return true
 			}
-
-		// Update the constructor
-		case *ast.FuncDecl:
-			if x.Name.Name == "New"+serviceData.ServiceFullName {
-				for _, repo := range serviceData.RepoData {
-					// First: ensure the parameter is added if missing
-					paramExists := false
-					for _, param := range x.Type.Params.List {
-						for _, name := range param.Names {
-							if name.Name == utils.PascalToCamel(repo.RepoFullName) {
-								paramExists = true
-								break
-							}
-						}
-						if paramExists {
+			st, ok := x.Type.(*ast.StructType)
+			if !ok {
+				return true
+			}
+			for _, repo := range serviceData.RepoData {
+				exists := false
+				for _, f := range st.Fields.List {
+					for _, nm := range f.Names {
+						if nm.Name == repo.RepoFullName {
+							exists = true
 							break
 						}
 					}
-
-					if !paramExists {
-						x.Type.Params.List = append(x.Type.Params.List, &ast.Field{
-							Names: []*ast.Ident{ast.NewIdent(utils.PascalToCamel(repo.RepoFullName))},
-							Type: &ast.SelectorExpr{
-								X:   ast.NewIdent(repoPackage),
-								Sel: ast.NewIdent(repo.RepoFullName + "Interface"),
-							},
-						})
+					if exists {
+						break
 					}
 				}
+				if !exists {
+					st.Fields.List = append(st.Fields.List, &ast.Field{
+						Names: []*ast.Ident{ast.NewIdent(repo.RepoFullName)},
+						Type:  ast.NewIdent(repoPackage + "." + repo.RepoFullName + "Interface"),
+					})
+				}
+			}
+			structUpdated = true
 
-				// Then: update the constructor body as you already did
-				if len(x.Body.List) > 0 {
-					if retStmt, ok := x.Body.List[0].(*ast.ReturnStmt); ok {
-						if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
-							for _, repo := range serviceData.RepoData {
-								compositeLit.Elts = append(compositeLit.Elts, &ast.KeyValueExpr{
-									Key:   ast.NewIdent(repo.RepoFullName),
-									Value: ast.NewIdent(utils.PascalToCamel(repo.RepoFullName)),
-								})
-								constructorUpdated = true
-							}
+		// --- constructor: add missing params; replace-or-append return fields
+		case *ast.FuncDecl:
+			if x.Name.Name != "New"+serviceData.ServiceFullName {
+				return true
+			}
 
+			// params
+			for _, repo := range serviceData.RepoData {
+				want := utils.PascalToCamel(repo.RepoFullName)
+				paramExists := false
+				for _, p := range x.Type.Params.List {
+					for _, nm := range p.Names {
+						if nm.Name == want {
+							paramExists = true
+							break
 						}
+					}
+					if paramExists {
+						break
+					}
+				}
+				if !paramExists {
+					x.Type.Params.List = append(x.Type.Params.List, &ast.Field{
+						Names: []*ast.Ident{ast.NewIdent(want)},
+						Type: &ast.SelectorExpr{
+							X:   ast.NewIdent(repoPackage),
+							Sel: ast.NewIdent(repo.RepoFullName + "Interface"),
+						},
+					})
+				}
+			}
+
+			// find the return stmt (prefer the last one)
+			var ret *ast.ReturnStmt
+			for i := len(x.Body.List) - 1; i >= 0; i-- {
+				if r, ok := x.Body.List[i].(*ast.ReturnStmt); ok {
+					ret = r
+					break
+				}
+			}
+			if ret != nil && len(ret.Results) > 0 {
+				if ul, ok := ret.Results[0].(*ast.UnaryExpr); ok {
+					if cl, ok := ul.X.(*ast.CompositeLit); ok {
+						// replace-or-append each repo field
+						for _, repo := range serviceData.RepoData {
+							key := repo.RepoFullName
+							val := ast.NewIdent(utils.PascalToCamel(repo.RepoFullName))
+							replaced := false
+							for i, elt := range cl.Elts {
+								if kv, ok := elt.(*ast.KeyValueExpr); ok {
+									if id, ok := kv.Key.(*ast.Ident); ok && id.Name == key {
+										kv.Value = val
+										cl.Elts[i] = kv
+										replaced = true
+										break
+									}
+								}
+							}
+							if !replaced {
+								cl.Elts = append(cl.Elts, &ast.KeyValueExpr{
+									Key:   ast.NewIdent(key),
+									Value: val,
+								})
+							}
+						}
+						constructorUpdated = true
 					}
 				}
 			}
@@ -721,52 +768,97 @@ func AddRepoToService(serviceData *ServiceData) error {
 		return fmt.Errorf("constructor New%s not found", serviceData.ServiceFullName)
 	}
 
-	// Create the output file
-	outFile, err := os.Create(serviceData.ServiceFilePath)
+	// write service file
+	out, err := os.Create(serviceData.ServiceFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to open file for writing: %w", err)
+		return fmt.Errorf("failed to open file: %w", err)
 	}
-	defer outFile.Close()
-
-	// Write the modified AST back to the file
-	err = printer.Fprint(outFile, fileSet, node)
-	if err != nil {
-		return fmt.Errorf("failed to write updated file: %w", err)
+	defer out.Close()
+	if err := printer.Fprint(out, fileSet, node); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	// 🔥 Now update CentralService constructor
-	centralServiceFilePath := path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go")
-	centralFileSet := token.NewFileSet()
-	centralNode, err := parser.ParseFile(centralFileSet, centralServiceFilePath, nil, parser.ParseComments)
+	// --- Update CentralService (replace args with unique centralRepo.<Repo>) ---
+	centralPath := path.Join(cli_config.CliConfig.ServicesFolderPath, "central_service.go")
+	cset := token.NewFileSet()
+	cnode, err := parser.ParseFile(cset, centralPath, nil, parser.ParseComments)
 	if err != nil {
 		return fmt.Errorf("failed to parse central service file: %w", err)
 	}
 
 	centralUpdated := false
 
-	ast.Inspect(centralNode, func(n ast.Node) bool {
-		if fn, ok := n.(*ast.FuncDecl); ok && fn.Name.Name == "NewCentralService" {
-			for _, stmt := range fn.Body.List {
-				if retStmt, ok := stmt.(*ast.ReturnStmt); ok {
-					if compositeLit, ok := retStmt.Results[0].(*ast.UnaryExpr).X.(*ast.CompositeLit); ok {
-						for _, elt := range compositeLit.Elts {
-							if kv, ok := elt.(*ast.KeyValueExpr); ok {
-								if sel, ok := kv.Value.(*ast.CallExpr); ok {
-									if funSel, ok := sel.Fun.(*ast.Ident); ok && funSel.Name == "New"+serviceData.ServiceFullName {
-										for _, repo := range serviceData.RepoData {
-											sel.Args = append(sel.Args, &ast.SelectorExpr{
-												X:   ast.NewIdent("centralRepo"),
-												Sel: ast.NewIdent(repo.RepoFullName),
-											})
-										}
-										centralUpdated = true
-									}
-								}
-							}
+	ast.Inspect(cnode, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "NewCentralService" {
+			return true
+		}
+		// find return &CentralService{ ... }
+		var ret *ast.ReturnStmt
+		for i := len(fn.Body.List) - 1; i >= 0; i-- {
+			if r, ok := fn.Body.List[i].(*ast.ReturnStmt); ok {
+				ret = r
+				break
+			}
+		}
+		if ret == nil || len(ret.Results) == 0 {
+			return true
+		}
+		ul, ok := ret.Results[0].(*ast.UnaryExpr)
+		if !ok {
+			return true
+		}
+		cl, ok := ul.X.(*ast.CompositeLit)
+		if !ok {
+			return true
+		}
+
+		target := serviceData.ServiceFullName // e.g., TestService
+		for _, elt := range cl.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok || key.Name != target {
+				continue
+			}
+			call, ok := kv.Value.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+
+			// Rebuild args uniquely
+			seen := map[string]struct{}{}
+			newArgs := make([]ast.Expr, 0, len(call.Args)+len(serviceData.RepoData))
+
+			// keep existing unique centralRepo.<Repo>
+			for _, a := range call.Args {
+				if sel, ok := a.(*ast.SelectorExpr); ok {
+					if id, ok := sel.X.(*ast.Ident); ok && id.Name == "centralRepo" {
+						name := sel.Sel.Name
+						if _, ok := seen[name]; !ok {
+							seen[name] = struct{}{}
+							newArgs = append(newArgs, a)
 						}
 					}
 				}
 			}
+			// ensure current repos are present
+			for _, repo := range serviceData.RepoData {
+				if _, ok := seen[repo.RepoFullName]; ok {
+					continue
+				}
+				seen[repo.RepoFullName] = struct{}{}
+				newArgs = append(newArgs, &ast.SelectorExpr{
+					X:   ast.NewIdent("centralRepo"),
+					Sel: ast.NewIdent(repo.RepoFullName),
+				})
+			}
+
+			call.Args = newArgs
+			centralUpdated = true
+			break
 		}
 		return true
 	})
@@ -775,14 +867,13 @@ func AddRepoToService(serviceData *ServiceData) error {
 		return fmt.Errorf("failed to update NewCentralService constructor call to New%s", serviceData.ServiceFullName)
 	}
 
-	outCentralFile, err := os.Create(centralServiceFilePath)
+	out2, err := os.Create(centralPath)
 	if err != nil {
-		return fmt.Errorf("failed to open central service file for writing: %w", err)
+		return fmt.Errorf("failed to open central service file: %w", err)
 	}
-	defer outCentralFile.Close()
-
-	if err := printer.Fprint(outCentralFile, centralFileSet, centralNode); err != nil {
-		return fmt.Errorf("failed to write updated central service file: %w", err)
+	defer out2.Close()
+	if err := printer.Fprint(out2, cset, cnode); err != nil {
+		return fmt.Errorf("failed to write central service file: %w", err)
 	}
 
 	return nil
@@ -791,26 +882,65 @@ func AddRepoToService(serviceData *ServiceData) error {
 // CopyRepoMethodsToService copies selected methods from a repository interface to a service interface.
 // It also generates proxy methods that call the underlying repository methods directly from the service.
 func CopyRepoMethodsToService(serviceData *ServiceData, methodNames []string) error {
-	// 1. Parse repository file
 	fileSet := token.NewFileSet()
-	var f *os.File
-	defer f.Close()
 
-	// 3. Parse service file
+	// Parse the service file
 	serviceAst, err := parser.ParseFile(fileSet, serviceData.ServiceFilePath, nil, parser.AllErrors)
 	if err != nil {
 		return err
 	}
 
+	// Helper: ensure an import exists (no-op if already present)
+	ensureImport := func(f *ast.File, importPath string) {
+		if importPath == "" {
+			return
+		}
+		for _, imp := range f.Imports {
+			if strings.Trim(imp.Path.Value, `"`) == importPath {
+				return // already imported
+			}
+		}
+		newImport := &ast.ImportSpec{
+			Path: &ast.BasicLit{Kind: token.STRING, Value: fmt.Sprintf("%q", importPath)},
+		}
+		// Try to append to an existing import block
+		for _, decl := range f.Decls {
+			if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.IMPORT {
+				gen.Specs = append(gen.Specs, newImport)
+				return
+			}
+		}
+		// No import block; create one at the top
+		f.Decls = append([]ast.Decl{
+			&ast.GenDecl{Tok: token.IMPORT, Specs: []ast.Spec{newImport}},
+		}, f.Decls...)
+	}
+
+	// Conditionally import models (existing behavior)
+	modelImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ModelsFolderPath)
+	ensureImport(serviceAst, modelImport)
+
+	paginationImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.DatabaseInstancesFolderPath)
+	needsPagination := false
+	for _, name := range methodNames {
+		if strings.Contains(name, "WithPagination") {
+			needsPagination = true
+			break
+		}
+	}
+	if needsPagination {
+		ensureImport(serviceAst, paginationImport)
+	}
+
 	for _, repo := range serviceData.RepoData {
+		// Parse each repo file
 		repoAst, err := parser.ParseFile(fileSet, repo.RepoFilePath, nil, parser.AllErrors)
 		if err != nil {
 			return err
 		}
 
-		// 2. Find repo interface and extract methods
+		// Find repo interface and collect selected methods
 		methodMap := make(map[string]*ast.Field)
-
 		for _, decl := range repoAst.Decls {
 			genDecl, ok := decl.(*ast.GenDecl)
 			if !ok || genDecl.Tok != token.TYPE {
@@ -825,21 +955,16 @@ func CopyRepoMethodsToService(serviceData *ServiceData, methodNames []string) er
 				if !ok {
 					continue
 				}
-
 				for _, method := range ifaceType.Methods.List {
-					if method == nil {
-						continue
-					}
-
-					if len(method.Names) == 0 {
-						continue // Skip embedded interfaces
+					if method == nil || len(method.Names) == 0 {
+						continue // skip embedded or malformed
 					}
 					if _, ok := method.Type.(*ast.FuncType); !ok {
-						continue // Skip non-methods
+						continue // skip non-methods
 					}
-					for _, name := range method.Names {
-						if contains(methodNames, name.Name) {
-							methodMap[name.Name] = method
+					for _, n := range method.Names {
+						if contains(methodNames, n.Name) {
+							methodMap[n.Name] = method
 						}
 					}
 				}
@@ -850,52 +975,7 @@ func CopyRepoMethodsToService(serviceData *ServiceData, methodNames []string) er
 			return fmt.Errorf("no methods found for %s", repo.RepoFullName+"Interface")
 		}
 
-		modelImport := path.Join(cli_config.CliConfig.ProjectName, cli_config.CliConfig.ModelsFolderPath)
-		//modelPackage := strings.Split(modelImport, "/")[strings.LastIndex(modelImport, "/")]
-
-		// Track if import already exists
-		importFound := false
-		for _, imp := range serviceAst.Imports {
-			impPath := strings.Trim(imp.Path.Value, `"`)
-			if impPath == modelImport {
-				importFound = true
-				break
-			}
-		}
-
-		// Add import if needed
-		if !importFound {
-			newImport := &ast.ImportSpec{
-				Path: &ast.BasicLit{
-					Kind:  token.STRING,
-					Value: fmt.Sprintf("%q", modelImport),
-				},
-			}
-
-			inserted := false
-			// Try to find existing import block
-			for _, decl := range serviceAst.Decls {
-				if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
-					genDecl.Specs = append(genDecl.Specs, newImport)
-					inserted = true
-					break
-				}
-			}
-
-			if !inserted {
-				// No import block found, create one
-				importDecl := &ast.GenDecl{
-					Tok: token.IMPORT,
-					Specs: []ast.Spec{
-						newImport,
-					},
-				}
-				// Insert it at the beginning of declarations
-				serviceAst.Decls = append([]ast.Decl{importDecl}, serviceAst.Decls...)
-			}
-		}
-
-		// 4. Update service interface
+		// 4) Update service interface: append selected methods (naive append; dedupe if needed)
 		for _, decl := range serviceAst.Decls {
 			genDecl, ok := decl.(*ast.GenDecl)
 			if !ok || genDecl.Tok != token.TYPE {
@@ -910,35 +990,34 @@ func CopyRepoMethodsToService(serviceData *ServiceData, methodNames []string) er
 				if !ok {
 					continue
 				}
-
-				// Append methods
 				for _, methodName := range methodNames {
-					if method, ok := methodMap[methodName]; ok {
-						ifaceType.Methods.List = append(ifaceType.Methods.List, method)
+					if m, ok := methodMap[methodName]; ok {
+						ifaceType.Methods.List = append(ifaceType.Methods.List, m)
 					}
 				}
 			}
 		}
 
-		// 5. Update service struct methods
+		// 5) Update service struct methods (proxy methods)
 		for _, methodName := range methodNames {
-			method, found := methodMap[methodName]
-			if !found {
+			m, ok := methodMap[methodName]
+			if !ok {
 				continue
 			}
-			funcDecl, err := buildProxyFuncDecl(method, serviceData.ServiceFullName, &repo)
+			funcDecl, err := buildProxyFuncDecl(m, serviceData.ServiceFullName, &repo)
 			if err != nil {
 				return err
 			}
 			serviceAst.Decls = append(serviceAst.Decls, funcDecl)
 		}
-
-		// 6. Write back to service file
-		f, err = os.Create(serviceData.ServiceFilePath)
-		if err != nil {
-			return err
-		}
 	}
+
+	// 6) Write back to service file (fix: create file before deferring Close)
+	f, err := os.Create(serviceData.ServiceFilePath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
 
 	return format.Node(f, fileSet, serviceAst)
 }
